@@ -226,8 +226,8 @@ async function handleInit(request, env) {
   }
   
   const existing = await env.KEYVAULT_KV.get('auth:token_hash');
-  // 允许覆盖：只有知道主密码的人才能派生出正确的 tokenHash
-  // 所以能发起此请求的必然是合法用户
+  // 允许覆盖：确定性盐方案下，同密码的 tokenHash 一定相同
+  // 迁移场景下旧 tokenHash 需要被新 tokenHash 替换
   await env.KEYVAULT_KV.put('auth:token_hash', body.tokenHash);
   
   if (existing && existing === body.tokenHash) {
