@@ -168,13 +168,14 @@ async function handleWebdavProxy(request, env) {
     }
   }
   
-  // 转发请求到目标 WebDAV 服务器
-  const headers = new Headers(request.headers);
-  headers.delete('host');
-  headers.delete('origin');
-  headers.delete('referer');
-  headers.delete('x-api-token');
-  // 保留 Authorization（WebDAV 认证）
+  // 只转发 WebDAV 需要的头，避免把浏览器/Cloudflare 内部头转发给目标服务器
+  // 导致目标服务器返回异常响应，Cloudflare 边缘无法解析产生 520
+  const headers = new Headers();
+  const forwardHeaders = ['authorization', 'content-type', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
+  for (const key of forwardHeaders) {
+    const val = request.headers.get(key);
+    if (val) headers.set(key, val);
+  }
   
   const init = {
     method: request.method,
