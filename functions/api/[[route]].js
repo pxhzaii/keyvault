@@ -173,9 +173,8 @@ async function handleWebdavProxy(request, env) {
   const realMethod = request.headers.get('x-webdav-method') || request.method;
   
   // 只转发 WebDAV 需要的头，避免把浏览器/Cloudflare 内部头转发给目标服务器
-  // 导致目标服务器返回异常响应，Cloudflare 边缘无法解析产生 520
   const headers = new Headers();
-  const forwardHeaders = ['authorization', 'content-type', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
+  const forwardHeaders = ['authorization', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
   for (const key of forwardHeaders) {
     const val = request.headers.get(key);
     if (val) headers.set(key, val);
@@ -186,9 +185,15 @@ async function handleWebdavProxy(request, env) {
     headers,
   };
   
-  // MKCOL/PROPFIND 没有 body，不要传 body 过去
-  if (['POST', 'PUT', 'PATCH'].includes(realMethod) && request.body) {
-    init.body = request.body;
+  // 只有带 body 的方法才转发 Content-Type 和 body
+  // PROPFIND/MKCOL/DELETE/HEAD 不应有 body，否则会导致目标服务器异常
+  if (['POST', 'PUT', 'PATCH'].includes(realMethod)) {
+    const ct = request.headers.get('content-type');
+    if (ct) headers.set('Content-Type', ct);
+    try {
+      const bodyBuf = await request.arrayBuffer();
+      if (bodyBuf.byteLength > 0) init.body = bodyBuf;
+    } catch(e) { /* no body */ }
   }
   
   try {
@@ -247,7 +252,8 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: CORS });
   }
   
-  // 路由
+  try {
+    // 路由
   if (url.pathname === '/api/vault') {
     if (request.method === 'GET') return handleVaultGet(request, env);
     if (request.method === 'PUT') return handleVaultPut(request, env);
@@ -272,5 +278,9 @@ export async function onRequest(context) {
     return handleInit(request, env);
   }
   
-  return corsResponse(JSON.stringify({ error: 'Not found' }), 404);
+   return corsResponse(JSON.stringify({ error: 'Not found' }), 404);
+  } catch (err) {
+    // 全局异常兜底：任何未捕获的异常返回 502 而不是让 Cloudflare 返回 520
+    return corsResponse(JSON.stringify({ error: 'Internal error: ' + (err?.message || String(err)) }), 502);
+  }
 }
