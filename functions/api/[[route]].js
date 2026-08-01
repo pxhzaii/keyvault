@@ -142,12 +142,13 @@ async function handleWebdavProxy(request, env) {
   // 速率限制
   const clientIp = request.headers.get('cf-connecting-ip') || 
                    request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-    if (!await checkRateLimit(clientIp, env)) {
+  if (!await checkRateLimit(clientIp, env)) {
     return corsResponse(JSON.stringify({ error: 'Rate limit exceeded. Max 60 requests/minute.' }), 429);
   }
   
   const url = new URL(request.url);
   const targetUrl = url.searchParams.get('url');
+  const realMethod = url.searchParams.get('method') || 'GET';
   
   if (!targetUrl) {
     return corsResponse(JSON.stringify({ error: 'Missing url parameter' }), 400);
@@ -159,8 +160,7 @@ async function handleWebdavProxy(request, env) {
       const targetHost = new URL(targetUrl).hostname;
       return corsResponse(
         JSON.stringify({ 
-          error: `Domain "${targetHost}" is not in the allowed WebDAV whitelist. ` +
-                 `Add it to ALLOWED_WEBDAV_DOMAINS in worker.js if needed.` 
+          error: `Domain "${targetHost}" is not in the allowed WebDAV whitelist.` 
         }), 403
       );
     } catch {
@@ -168,13 +168,9 @@ async function handleWebdavProxy(request, env) {
     }
   }
   
-  // 从 X-WebDAV-Method 头取出真实的 WebDAV 方法
-  // 前端统一用 POST 发请求（因为 Cloudflare 边缘不转发 MKCOL/PROPFIND 等非标准方法，直接 520）
-  const realMethod = request.headers.get('x-webdav-method') || request.method;
-  
-  // 只转发 WebDAV 需要的头，避免把浏览器/Cloudflare 内部头转发给目标服务器
+  // 只转发 WebDAV 需要的头
   const headers = new Headers();
-  const forwardHeaders = ['authorization', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
+  const forwardHeaders = ['authorization', 'content-type', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
   for (const key of forwardHeaders) {
     const val = request.headers.get(key);
     if (val) headers.set(key, val);
@@ -183,13 +179,11 @@ async function handleWebdavProxy(request, env) {
   const init = {
     method: realMethod,
     headers,
+    redirect: 'follow',
   };
   
-  // 只有带 body 的方法才转发 Content-Type 和 body
-  // PROPFIND/MKCOL/DELETE/HEAD 不应有 body，否则会导致目标服务器异常
+  // 只有带 body 的方法才转发 body
   if (['POST', 'PUT', 'PATCH'].includes(realMethod)) {
-    const ct = request.headers.get('content-type');
-    if (ct) headers.set('Content-Type', ct);
     try {
       const bodyBuf = await request.arrayBuffer();
       if (bodyBuf.byteLength > 0) init.body = bodyBuf;
@@ -198,12 +192,8 @@ async function handleWebdavProxy(request, env) {
   
   try {
     const resp = await fetch(targetUrl, init);
-    // 不能流式转发 resp.body：坚果云返回的响应含 transfer-encoding/content-encoding
-    // 等头，Cloudflare 边缘不允许源站返回这些头，直接 520
-    // 所以必须读取完整 body，用干净的头重新构建响应
     const body = await resp.arrayBuffer();
     const respHeaders = new Headers();
-    // 只转发安全的响应头
     const safeHeaders = ['content-type', 'dav', 'etag', 'last-modified', 'content-length', 'content-range'];
     for (const key of safeHeaders) {
       const val = resp.headers.get(key);
@@ -220,7 +210,7 @@ async function handleWebdavProxy(request, env) {
       headers: respHeaders,
     });
   } catch (err) {
-    return corsResponse(JSON.stringify({ error: 'Proxy error: ' + err.message }), 502);
+    return corsResponse(JSON.stringify({ error: 'Proxy error: ' + (err?.message || String(err)) }), 502);
   }
 }
 
@@ -266,6 +256,27 @@ export async function onRequest(context) {
   
   if (url.pathname === '/api/webdav-proxy') {
     return handleWebdavProxy(request, env);
+  }
+  
+  // 调试端点：验证 Worker 是否存活、fetch 坚果云是否可达
+  if (url.pathname === '/api/debug') {
+    try {
+      const testUrl = 'https://dav.jianguoyun.com/dav/';
+      const start = Date.now();
+      const resp = await fetch(testUrl, { method: 'GET', headers: { 'Authorization': 'Basic dGVzdDp0ZXN0' } });
+      const elapsed = Date.now() - start;
+      const body = await resp.text();
+      return corsResponse(JSON.stringify({
+        ok: true,
+        target: testUrl,
+        status: resp.status,
+        elapsed: elapsed + 'ms',
+        bodyPreview: body.substring(0, 200),
+        respHeaders: Object.fromEntries(resp.headers.entries())
+      }));
+    } catch (err) {
+      return corsResponse(JSON.stringify({ ok: false, error: err?.message || String(err) }));
+    }
   }
   
   if (url.pathname === '/api/init') {
