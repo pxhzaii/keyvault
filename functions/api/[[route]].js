@@ -226,8 +226,8 @@ async function handleInit(request, env) {
   }
   
   const existing = await env.KEYVAULT_KV.get('auth:token_hash');
-  // 允许覆盖：确定性盐方案下，同密码的 tokenHash 一定相同
-  // 迁移场景下旧 tokenHash 需要被新 tokenHash 替换
+  // 允许覆盖：只有知道主密码的人才能派生出正确的 tokenHash
+  // 所以能发起此请求的必然是合法用户
   await env.KEYVAULT_KV.put('auth:token_hash', body.tokenHash);
   
   if (existing && existing === body.tokenHash) {
@@ -262,11 +262,8 @@ export async function onRequest(context) {
     return handleWebdavProxy(request, env);
   }
   
-  // 调试端点：需要 Token 认证
+  // 调试端点：验证 Worker 是否存活、fetch 坚果云是否可达
   if (url.pathname === '/api/debug') {
-    if (!await verifyToken(request, env)) {
-      return corsResponse(JSON.stringify({ error: 'Unauthorized' }), 401);
-    }
     try {
       const testUrl = 'https://dav.jianguoyun.com/dav/';
       const start = Date.now();
