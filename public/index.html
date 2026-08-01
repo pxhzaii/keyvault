@@ -340,14 +340,20 @@ async function kvPush(){
   if(!cfg.apiBase||!apiToken)return toast('请先配置云端同步','err');
   toast('推送到 KV...','info');
   try{
-    vaultVersion++;
+    // 先拉取远程 version，取 max(本地, 远程)+1，避免多设备版本号倒退
+    let remoteVersion=vaultVersion;
+    try{
+      const head=await fetch(cfg.apiBase+'/api/vault',{method:'GET',headers:{'Authorization':'Bearer '+apiToken}});
+      if(head.ok){const hj=await head.json();if(hj.version>remoteVersion)remoteVersion=hj.version}
+    }catch(e){}
+    vaultVersion=Math.max(vaultVersion,remoteVersion)+1;
     const all=entries.filter(e=>!e.deleted);
     const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
     let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-  }catch(e){vaultVersion--;toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
+  }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
 }
 async function kvPull(){
   if(!requireOnline())return;
@@ -463,13 +469,21 @@ async function wdavSync(){
   if(!cfg.wdavUrl)return toast('请先配置 WebDAV','err');
   toast('备份到 WebDAV...','info');
   try{
-    vaultVersion++;
+    // 先拉取远程 version，取 max(本地, 远程)+1，避免多设备版本号倒退
+    let remoteVersion=vaultVersion;
+    try{
+      const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
+      const {bodyText:b64}=await wdavReq('GET',p);
+      const remote=await dec(b64,mk);
+      if(remote.version>remoteVersion)remoteVersion=remote.version;
+    }catch(e){}
+    vaultVersion=Math.max(vaultVersion,remoteVersion)+1;
     const all=entries.filter(e=>!e.deleted);
     const data=await enc({entries:all,version:vaultVersion,exportedAt:Date.now()},mk);
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
     await wdavReq('PUT',p,data,true);toast('WebDAV 备份成功','ok');
     await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-  }catch(e){vaultVersion--;toast('WebDAV 备份失败: '+e.message,'err')}
+  }catch(e){toast('WebDAV 备份失败: '+e.message,'err')}
 }
 async function wdavPull(){
   if(!requireOnline())return;
