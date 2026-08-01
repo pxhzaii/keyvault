@@ -262,8 +262,11 @@ export async function onRequest(context) {
     return handleWebdavProxy(request, env);
   }
   
-  // 调试端点：验证 Worker 是否存活、fetch 坚果云是否可达
+  // 调试端点：需要 Token 认证
   if (url.pathname === '/api/debug') {
+    if (!await verifyToken(request, env)) {
+      return corsResponse(JSON.stringify({ error: 'Unauthorized' }), 401);
+    }
     try {
       const testUrl = 'https://dav.jianguoyun.com/dav/';
       const start = Date.now();
