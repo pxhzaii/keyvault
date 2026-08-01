@@ -397,16 +397,31 @@ async function kvPull(){
 /* ===== WebDAV Backup ===== */
 async function wdavReq(method,path,body=null,rawBody=false){
   if(!cfg.apiBase){toast('请先配置 API 地址以启用 WebDAV 代理','err');throw new Error('未配置 API 地址')}
-  const url=cfg.apiBase+'/api/webdav-proxy?url='+encodeURIComponent(cfg.wdavUrl.replace(/\/$/,'')+path);
-  const h={'X-WebDAV-Method':method};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
-  if(method==='PROPFIND')h['Depth']='0';
+  const targetUrl=cfg.wdavUrl.replace(/\/$/,'')+path;
+  const url=cfg.apiBase+'/api/webdav-proxy?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
+  const h={};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
   if(cfg.wdavUser)h['Authorization']='Basic '+toB64(new TextEncoder().encode(cfg.wdavUser+':'+cfg.wdavPass));
   if(apiToken&&cfg.apiBase)h['X-Api-Token']=apiToken;
   const opts={method:'POST',headers:h,mode:'cors'};
   if(body)opts.body=rawBody?body:JSON.stringify(body);
-  const res=await fetch(url,opts);if(!res.ok&&!(method==='PROPFIND'&&res.status===207))throw new Error(`WebDAV ${method}: ${res.status}`);return res;
+  const res=await fetch(url,opts);if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);return res;
 }
-async function wdavTest(){try{await wdavReq('PROPFIND',cfg.wdavPath||'/KeyVault/');return true}catch(e){try{await wdavReq('MKCOL',cfg.wdavPath||'/KeyVault/');return true}catch(e2){throw e2}}}
+async function wdavTest(){
+  // 用 GET 请求 vault.enc 文件来测试连接（不用 PROPFIND/MKCOL，避免 Cloudflare 520）
+  try{
+    const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
+    await wdavReq('GET',p);
+    return true; // 文件存在，连接成功
+  }catch(e){
+    // 文件不存在时尝试 PUT 创建（坚果云会自动创建父目录）
+    try{
+      const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
+      const testData=await enc({entries:[],version:0,exportedAt:Date.now()},mk);
+      await wdavReq('PUT',p,testData,true);
+      return true;
+    }catch(e2){throw e2}
+  }
+}
 async function wdavSync(){
   if(!requireOnline())return;
   if(!cfg.wdavUrl)return toast('请先配置 WebDAV','err');
