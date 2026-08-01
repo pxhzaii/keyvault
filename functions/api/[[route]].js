@@ -193,13 +193,23 @@ async function handleWebdavProxy(request, env) {
   
   try {
     const resp = await fetch(targetUrl, init);
-    const respHeaders = new Headers(resp.headers);
+    // 不能流式转发 resp.body：坚果云返回的响应含 transfer-encoding/content-encoding
+    // 等头，Cloudflare 边缘不允许源站返回这些头，直接 520
+    // 所以必须读取完整 body，用干净的头重新构建响应
+    const body = await resp.arrayBuffer();
+    const respHeaders = new Headers();
+    // 只转发安全的响应头
+    const safeHeaders = ['content-type', 'dav', 'etag', 'last-modified', 'content-length', 'content-range'];
+    for (const key of safeHeaders) {
+      const val = resp.headers.get(key);
+      if (val) respHeaders.set(key, val);
+    }
     for (const [k, v] of Object.entries(CORS)) {
       respHeaders.set(k, v);
     }
     respHeaders.set('Access-Control-Expose-Headers', 'DAV, Content-Length, Content-Range, ETag');
     
-    return new Response(resp.body, {
+    return new Response(body, {
       status: resp.status,
       statusText: resp.statusText,
       headers: respHeaders,
