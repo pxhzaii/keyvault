@@ -311,6 +311,17 @@ async function softDel(id){const i=entries.findIndex(e=>e.id===id);if(i<0)return
 async function restoreEntry(id){const i=entries.findIndex(e=>e.id===id);if(i<0)return;entries[i].deleted=false;entries[i].deletedAt=null;await saveEntry(entries[i])}
 async function hardDel(id){entries=entries.filter(e=>e.id!==id);await idbDel(ST,id)}
 
+/* ===== KV Token 初始化 ===== */
+async function initKvToken(){
+  if(!cfg.apiBase||!apiToken)return false;
+  try{
+    const th=await idbGet(CF,'tokenHash');
+    if(!th||!th.v)return false;
+    const res=await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th.v})});
+    return res.ok;
+  }catch(e){return false}
+}
+
 /* ===== KV Cloud Sync ===== */
 async function kvPush(){
   if(!requireOnline())return;
@@ -319,7 +330,8 @@ async function kvPush(){
   try{
     const all=entries.filter(e=>!e.deleted);
     const vaultData=await enc({entries:all,version:++vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
-    const res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
+    let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
+    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
   }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
@@ -329,7 +341,8 @@ async function kvPull(){
   if(!cfg.apiBase||!apiToken)return toast('请先配置云端同步','err');
   toast('从 KV 拉取...','info');
   try{
-    const res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}});
+    let res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}});
+    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}})}
     if(res.status===404){toast('云端暂无数据','info');return}
     if(!res.ok)throw new Error(await res.text());
     const {data,version}=await res.json();
@@ -456,8 +469,9 @@ async function handleSetup(){
     mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);
     const h=await sha256(pwd+Array.from(SALT).join(','));const th=await sha256(apiToken);
     await idbPut(CF,{k:'vaultHash',v:h});await idbPut(CF,{k:'created',v:Date.now()});await idbPut(CF,{k:'tokenHash',v:th});
-    if(cfg.apiBase){try{await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th})})}catch(e){}}
+    if(cfg.apiBase){try{const th2=await sha256(apiToken);await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th2})})}catch(e){}}
     failCount=0;lockUntil=0;
+    await initKvToken();
     await loadEntries();const vData=await idbGet(CF,'vaultVersion');if(vData)vaultVersion=vData.v||0;
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
@@ -493,6 +507,7 @@ async function handleUnlock(){
     }
     // 解锁成功，重置计数
     failCount=0;lockUntil=0;clearTimeout(lockdownTimer);
+    await initKvToken();
     await loadEntries();const vData=await idbGet(CF,'vaultVersion');if(vData)vaultVersion=vData.v||0;
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
@@ -601,7 +616,7 @@ async function emptyTrash(){if(!requireOnline())return;if(!confirm('清空回收
 
 /* ===== Settings ===== */
 function showSettings(){document.getElementById('moTitle').textContent='设置';const h=`<div class="stg-sec"><h3>外观</h3><div class="stg-item"><div class="stg-info"><h4>深色模式</h4><p>切换深色/浅色主题</p></div><div class="toggle ${cfg.dark?'on':''}" onclick="this.classList.toggle('on');cfg.dark=this.classList.contains('on');applyDark();saveCfg()"></div></div></div><div class="stg-sec"><h3>安全</h3><div class="stg-item"><div class="stg-info"><h4>自动锁定</h4><p>无操作后自动锁定</p></div><select style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font-size:13px" onchange="cfg.autoLock=+this.value;saveCfg();resetLock()"><option value="0" ${cfg.autoLock===0?'selected':''}>不锁定</option><option value="1" ${cfg.autoLock===1?'selected':''}>1分钟</option><option value="3" ${cfg.autoLock===3?'selected':''}>3分钟</option><option value="5" ${cfg.autoLock===5?'selected':''}>5分钟</option><option value="10" ${cfg.autoLock===10?'selected':''}>10分钟</option><option value="15" ${cfg.autoLock===15?'selected':''}>15分钟</option></select></div></div><div class="stg-sec"><h3>☁️ 云端同步（KV）</h3><p style="font-size:13px;color:var(--tx2);margin-bottom:10px">数据加密存储在 Cloudflare Workers KV，前端和 API 同域，无 CORS 问题</p><div class="wdav"><div class="fg"><label class="fl">API 地址</label><input class="fi" id="apiBase" value="${escA(cfg.apiBase)}" placeholder="https://your-site.pages.dev"></div><div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd)"><strong style="color:var(--tx)">✅ 天然无 CORS</strong><br>前端部署在 Cloudflare Pages，后端 API 同域，浏览器不会拦截请求。<br>WebDAV 代理也走同域 Worker，彻底解决跨域问题。</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="kvPush()">⬆️ 推送到 KV</button><button class="btn btn-g btn-sm" onclick="kvPull()">⬇️ 从 KV 拉取</button></div></div><div class="stg-sec"><h3>📦 WebDAV 备份</h3><div class="wdav"><div class="fg"><label class="fl">服务类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguop')?'selected':''}>坚果云</option></select></div><div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div><div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div><div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div><div class="fg"><label class="fl">同步路径</label><input class="fi" id="wPath" value="${escA(cfg.wdavPath||'/KeyVault/')}" placeholder="/KeyVault/"></div><div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd)"><strong style="color:var(--tx)">✅ 无需单独 CORS 代理</strong><br>WebDAV 请求通过同域的 <code>/api/webdav-proxy</code> 转发，浏览器无跨域限制。<br>如果你已配置 KV 云端同步，WebDAV 自动走同域代理。<br>未配置 KV 时，可手动填写外部 CORS 代理地址。</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="wdavSync()">⬆️ 备份到 WebDAV</button><button class="btn btn-g btn-sm" onclick="wdavPull()">⬇️ 从 WebDAV 拉取</button><button class="btn btn-g btn-sm" onclick="testWdav()">测试</button></div><div id="wStatus"></div></div><div class="stg-sec"><h3>🔄 全量同步</h3><p style="font-size:13px;color:var(--tx2);margin-bottom:10px">同时从 KV 和 WebDAV 拉取最新数据，合并后推送回所有源</p><button class="btn btn-p btn-sm" onclick="fullSync()">🔄 全量同步</button></div><div class="stg-sec"><h3>导入 / 导出</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-g btn-sm" onclick="doExportJSON()">📄 导出 JSON</button><button class="btn btn-g btn-sm" onclick="doExportEnc()">🔒 加密导出</button></div><div class="ie-area" onclick="document.getElementById('impF').click()"><p>📂 点击导入文件</p><p style="font-size:12px;color:var(--tx3);margin-top:4px">KeyVault JSON / Bitwarden JSON / CSV</p></div><input type="file" id="impF" style="display:none" accept=".json,.csv" onchange="doImport(this.files[0]);this.value=''"></div><div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> — 三端同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，遗忘无法恢复</p></div></div>`;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
-function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';saveCfg();toast('设置已保存','ok');renderSB()}
+function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'}catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
 
 /* ===== Modal ===== */
