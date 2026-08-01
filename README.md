@@ -11,46 +11,13 @@
 
 #### 方式 A：GitHub 仓库（推荐）
 
-1. 创建 GitHub 仓库
-2. 上传以下文件：
-
-```
-keyvault/
-├── public/
-│   └── index.html          ← 将 KeyVault-v2.html 重命名
-├── functions/
-│   └── api/
-│       └── [[route]].js    ← 将 worker.js 重命名
-├── wrangler.toml
-├── _routes.json
-└── package.json
-```
-
-3. 登录 Cloudflare Dashboard → Workers & Pages → 创建
-4. 选择「连接到 Git」→ 选你的仓库
-5. 构建设置：
+1. Fork 仓库
+2. 登录 Cloudflare Dashboard → Workers & Pages → 创建
+3. 选择「连接到 Git」→ 选你的仓库
+4. 构建设置：
    - 构建命令：留空
    - 构建输出目录：`public`
-6. 部署
-
-#### 方式 B：Wrangler CLI
-
-```bash
-# 安装 wrangler
-npm install -g wrangler
-
-# 登录
-wrangler login
-
-# 创建项目目录
-mkdir keyvault && cd keyvault
-
-# 按上面的结构放好文件后...
-npm init -y
-
-# 部署
-wrangler pages deploy public --project-name keyvault
-```
+5. 部署
 
 ### 第 3 步：绑定 KV
 
