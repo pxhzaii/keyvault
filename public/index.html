@@ -253,7 +253,7 @@ let db=null,mk=null,apiToken=null,curPwd=null,curView='all',entries=[],lockTimer
 let SALT=null; // 设备随机盐，从 IndexedDB 加载
 let isOffline=false; // 离线模式标记
 let failCount=0,lockUntil=0,lockdownTimer=null; // 暴力破解防护
-let cfg={dark:false,autoLock:5,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/'};
+let cfg={dark:false,autoLock:5,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
 
 /* ===== 设备随机盐 ===== */
 // 首次创建时生成 32 字节随机盐存入 IndexedDB，每台设备不同
@@ -396,15 +396,24 @@ async function kvPull(){
 
 /* ===== WebDAV Backup ===== */
 async function wdavReq(method,path,body=null,rawBody=false){
-  if(!cfg.apiBase){toast('请先配置 API 地址以启用 WebDAV 代理','err');throw new Error('未配置 API 地址')}
+  if(!cfg.wdavUrl)return toast('请先配置 WebDAV','err'),Promise.reject(new Error('未配置 WebDAV'));
   const targetUrl=cfg.wdavUrl.replace(/\/$/,'')+path;
-  const url=cfg.apiBase+'/api/webdav-proxy?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
   const h={};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
   if(cfg.wdavUser)h['Authorization']='Basic '+toB64(new TextEncoder().encode(cfg.wdavUser+':'+cfg.wdavPass));
-  if(apiToken&&cfg.apiBase)h['X-Api-Token']=apiToken;
+  let proxyUrl;
+  if(cfg.wdavProxy){
+    // 用户配置了外部代理（如 Vercel），优先使用
+    proxyUrl=cfg.wdavProxy.replace(/\/$/,'')+'?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
+  }else if(cfg.apiBase){
+    // 回退到 Cloudflare 同域代理（坚果云等 Cloudflare 站点会 520，仅对非 CF 目标有效）
+    proxyUrl=cfg.apiBase+'/api/webdav-proxy?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
+    if(apiToken)h['X-Api-Token']=apiToken;
+  }else{
+    toast('请先配置 WebDAV 代理地址或 KV API 地址','err');return Promise.reject(new Error('未配置代理'));
+  }
   const opts={method:'POST',headers:h,mode:'cors'};
   if(body)opts.body=rawBody?body:JSON.stringify(body);
-  const res=await fetch(url,opts);if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);return res;
+  const res=await fetch(proxyUrl,opts);if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);return res;
 }
 async function wdavTest(){
   // 用 GET 请求 vault.enc 文件来测试连接（不用 PROPFIND/MKCOL，避免 Cloudflare 520）
@@ -671,14 +680,14 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 </div>
 <div>
   <div class="stg-sec"><h3>☁️ 云端同步（KV）</h3><div class="wdav"><div class="fg"><label class="fl">API 地址</label><input class="fi" id="apiBase" value="${escA(cfg.apiBase)}" placeholder="https://your-site.pages.dev"></div><div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd)"><strong style="color:var(--tx)">✅ 天然无 CORS</strong><br>前端和 API 同域部署，浏览器不会拦截请求。<br>WebDAV 代理也走同域 Worker。</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="kvPush()">⬆️ 推送</button><button class="btn btn-g btn-sm" onclick="kvPull()">⬇️ 拉取</button></div></div>
-  <div class="stg-sec"><h3>📦 WebDAV 备份</h3><div class="wdav"><div class="fg"><label class="fl">服务类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguop')?'selected':''}>坚果云</option></select></div><div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div><div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div><div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div><div class="fg"><label class="fl">同步路径</label><input class="fi" id="wPath" value="${escA(cfg.wdavPath||'/KeyVault/')}" placeholder="/KeyVault/"></div><div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd)">WebDAV 请求通过同域 <code>/api/webdav-proxy</code> 转发，无跨域限制。</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="wdavSync()">⬆️ 备份</button><button class="btn btn-g btn-sm" onclick="wdavPull()">⬇️ 拉取</button><button class="btn btn-g btn-sm" onclick="testWdav()">测试</button></div><div id="wStatus"></div></div>
+  <div class="stg-sec"><h3>📦 WebDAV 备份</h3><div class="wdav"><div class="fg"><label class="fl">服务类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguop')?'selected':''}>坚果云</option></select></div><div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div><div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div><div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div><div class="fg"><label class="fl">同步路径</label><input class="fi" id="wPath" value="${escA(cfg.wdavPath||'/KeyVault/')}" placeholder="/KeyVault/"></div><div class="fg"><label class="fl">代理地址（可选）</label><input class="fi" id="wdavProxy" value="${escA(cfg.wdavProxy||'')}" placeholder="https://your-proxy.vercel.app/api/webdav"></div><div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg2);border-radius:6px;border:1px solid var(--bd)">坚果云等使用 Cloudflare 的服务，同域 CF Worker 无法直连（520）。<br>需要部署 Vercel 代理：<code>https://vercel.com/new</code> 导入 vercel-proxy 文件夹即可。<br>不填则回退到同域 CF 代理（仅对非 CF 站点有效）。</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="wdavSync()">⬆️ 备份</button><button class="btn btn-g btn-sm" onclick="wdavPull()">⬇️ 拉取</button><button class="btn btn-g btn-sm" onclick="testWdav()">测试</button></div><div id="wStatus"></div></div>
 </div>
 </div>
 <div class="stg-sec" style="margin-top:8px"><h3>🔄 同步与备份</h3><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn btn-p btn-sm" onclick="fullSync()">🔄 全量同步</button><span style="font-size:12px;color:var(--tx3)">同时从 KV 和 WebDAV 拉取最新数据，合并后推送回所有源</span></div></div>
 <div class="stg-sec"><h3>📥 导入 / 📤 导出</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-g btn-sm" onclick="doExportJSON()">📄 导出 JSON</button><button class="btn btn-g btn-sm" onclick="doExportEnc()">🔒 加密导出</button></div><div class="ie-area" onclick="document.getElementById('impF').click()"><p>📂 点击导入文件</p><p style="font-size:12px;color:var(--tx3);margin-top:4px">KeyVault JSON / Bitwarden JSON / CSV</p></div><input type="file" id="impF" style="display:none" accept=".json,.csv" onchange="doImport(this.files[0]);this.value=''"></div>
 <div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> — 三端同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，遗忘无法恢复</p></div></div>
 `;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
-function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
+function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'}catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
 
 /* ===== Modal ===== */
