@@ -340,13 +340,14 @@ async function kvPush(){
   if(!cfg.apiBase||!apiToken)return toast('请先配置云端同步','err');
   toast('推送到 KV...','info');
   try{
+    vaultVersion++;
     const all=entries.filter(e=>!e.deleted);
     const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
     let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-  }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
+  }catch(e){vaultVersion--;toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
 }
 async function kvPull(){
   if(!requireOnline())return;
@@ -366,13 +367,22 @@ async function kvPull(){
       return;
     }
     if(!remote.entries||!Array.isArray(remote.entries))throw new Error('格式无效');
-    // LWW: compare version
+    // 远程版本不比本地新则跳过
     if(version<=vaultVersion){toast('本地已是最新','info');return}
+    // 全量快照覆盖：远程快照包含所有有效条目，用其完全替换本地
+    // 1. 删除本地存在但远程不存在的条目（A 删了条目并推送后，B 拉取时需要同步删除）
+    const remoteIds=new Set(remote.entries.map(e=>e.id));
+    for(const loc of entries){
+      if(!loc.deleted&&!remoteIds.has(loc.id)){
+        await softDel(loc.id);
+      }
+    }
+    // 2. 用远程条目覆盖本地
     let added=0,updated=0;
     for(const e of remote.entries){
       const loc=entries.find(x=>x.id===e.id);
       if(!loc){await saveEntry(e);entries.push(e);added++}
-      else if(e.updatedAt>loc.updatedAt){await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
+      else{await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
     }
     vaultVersion=version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
     toast(`拉取成功: 新增${added} 更新${updated}`,'ok');render();renderSB();updateSyncStatus('ok');
@@ -453,11 +463,13 @@ async function wdavSync(){
   if(!cfg.wdavUrl)return toast('请先配置 WebDAV','err');
   toast('备份到 WebDAV...','info');
   try{
+    vaultVersion++;
     const all=entries.filter(e=>!e.deleted);
     const data=await enc({entries:all,version:vaultVersion,exportedAt:Date.now()},mk);
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
     await wdavReq('PUT',p,data,true);toast('WebDAV 备份成功','ok');
-  }catch(e){toast('WebDAV 备份失败: '+e.message,'err')}
+    await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
+  }catch(e){vaultVersion--;toast('WebDAV 备份失败: '+e.message,'err')}
 }
 async function wdavPull(){
   if(!requireOnline())return;
@@ -468,11 +480,18 @@ async function wdavPull(){
     const {bodyText:b64}=await wdavReq('GET',p);
     const data=await dec(b64,mk);
     if(!data.entries||!Array.isArray(data.entries))throw new Error('格式无效');
+    // 全量快照覆盖：远程快照包含所有有效条目，用其完全替换本地
+    const remoteIds=new Set(data.entries.map(e=>e.id));
+    for(const loc of entries){
+      if(!loc.deleted&&!remoteIds.has(loc.id)){
+        await softDel(loc.id);
+      }
+    }
     let added=0,updated=0;
     for(const e of data.entries){
       const loc=entries.find(x=>x.id===e.id);
       if(!loc){await saveEntry(e);entries.push(e);added++}
-      else if(e.updatedAt>loc.updatedAt){await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
+      else{await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
     }
     if(data.version>vaultVersion){vaultVersion=data.version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion})}
     toast(`WebDAV 拉取: 新增${added} 更新${updated}`,'ok');render();renderSB();
