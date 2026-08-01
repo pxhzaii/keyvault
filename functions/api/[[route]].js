@@ -170,6 +170,10 @@ async function handleWebdavProxy(request, env) {
   
   // 只转发 WebDAV 需要的头
   const headers = new Headers();
+  // 伪装为正常浏览器请求，避免被坚果云 Cloudflare WAF 拦截返回 520
+  headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+  headers.set('Accept', '*/*');
+  headers.set('Accept-Language', 'zh-CN,zh;q=0.9,en;q=0.8');
   const forwardHeaders = ['authorization', 'content-type', 'depth', 'if-match', 'if-none-match', 'overwrite', 'destination'];
   for (const key of forwardHeaders) {
     const val = request.headers.get(key);
@@ -263,7 +267,14 @@ export async function onRequest(context) {
     try {
       const testUrl = 'https://dav.jianguoyun.com/dav/';
       const start = Date.now();
-      const resp = await fetch(testUrl, { method: 'GET', headers: { 'Authorization': 'Basic dGVzdDp0ZXN0' } });
+      const resp = await fetch(testUrl, { 
+        method: 'GET', 
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Authorization': 'Basic dGVzdDp0ZXN0'
+        }
+      });
       const elapsed = Date.now() - start;
       const body = await resp.text();
       return corsResponse(JSON.stringify({
