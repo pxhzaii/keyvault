@@ -234,7 +234,7 @@ const CATS=[{id:'all',name:'全部',icon:'📋',cls:''},{id:'social',name:'社�
 const CB_TIMEOUT=30000;
 
 /* ===== State ===== */
-let db=null,mk=null,apiToken=null,curView='all',entries=[],lockTimer=null,totpInterval=null,vaultVersion=0;
+let db=null,mk=null,apiToken=null,curPwd=null,curView='all',entries=[],lockTimer=null,totpInterval=null,vaultVersion=0;
 let SALT=null; // 设备随机盐，从 IndexedDB 加载
 let isOffline=false; // 离线模式标记
 let failCount=0,lockUntil=0,lockdownTimer=null; // 暴力破解防护
@@ -323,15 +323,18 @@ async function initKvToken(){
 }
 
 /* ===== KV Cloud Sync ===== */
+// kvPush: 推送加密数据 + deviceSalt 到 KV
+// kvPull: 拉取时先尝试恢复 salt（清除浏览器后同密码可恢复数据）
 async function kvPush(){
   if(!requireOnline())return;
   if(!cfg.apiBase||!apiToken)return toast('请先配置云端同步','err');
   toast('推送到 KV...','info');
   try{
     const all=entries.filter(e=>!e.deleted);
-    const vaultData=await enc({entries:all,version:++vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
-    let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
-    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
+    const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
+    const saltArr=Array.from(SALT);
+    let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion,salt:saltArr})});
+    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion,salt:saltArr})})}
     if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
   }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
@@ -345,8 +348,23 @@ async function kvPull(){
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}})}
     if(res.status===404){toast('云端暂无数据','info');return}
     if(!res.ok)throw new Error(await res.text());
-    const {data,version}=await res.json();
-    const remote=await dec(data,mk);
+    const {data,version,salt}=await res.json();
+    // 如果云端有 salt 且本地没有（清浏览器后），先恢复 salt
+    if(salt&&Array.isArray(salt)&&salt.length===32){
+      const localSalt=await idbGet(CF,'deviceSalt');
+      if(!localSalt||!localSalt.v){
+        await importWithSalt(salt);
+        // 用恢复的盐重新派生密钥
+        if(curPwd){mk=await deriveKey(curPwd);apiToken=await deriveApiToken(curPwd)}
+      }
+    }
+    let remote;
+    try{
+      remote=await dec(data,mk);
+    }catch(e){
+      toast('拉取失败: 云端数据由其他主密码加密，无法解密。如需覆盖请先推送本地数据','err');
+      return;
+    }
     if(!remote.entries||!Array.isArray(remote.entries))throw new Error('格式无效');
     // LWW: compare version
     if(version<=vaultVersion){toast('本地已是最新','info');return}
@@ -466,7 +484,7 @@ async function handleSetup(){
   if(pwd.length<4){err.textContent='密码至少4位';return}
   if(pwd!==pwd2){err.textContent='两次密码不一致';return}
   try{
-    mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);
+    mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
     const h=await sha256(pwd+Array.from(SALT).join(','));const th=await sha256(apiToken);
     await idbPut(CF,{k:'vaultHash',v:h});await idbPut(CF,{k:'created',v:Date.now()});await idbPut(CF,{k:'tokenHash',v:th});
     if(cfg.apiBase){try{const th2=await sha256(apiToken);await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th2})})}catch(e){}}
@@ -493,7 +511,7 @@ async function handleUnlock(){
   }
   const err=document.getElementById('lockErr');
   try{
-    await getOrCreateSalt();mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);
+    await getOrCreateSalt();mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
     const h=await sha256(pwd+Array.from(SALT).join(','));const stored=await idbGet(CF,'vaultHash');
     if(h!==stored.v){
         failCount++;
@@ -515,7 +533,7 @@ async function handleUnlock(){
     loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
-function lockVault(){mk=null;apiToken=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
+function lockVault(){mk=null;apiToken=null;curPwd=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
