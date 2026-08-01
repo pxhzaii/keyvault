@@ -775,8 +775,6 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 `;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
 function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
-  // 先测代理本身是否可达
-  if(cfg.wdavProxy){try{    const pr=await fetch(cfg.wdavProxy.replace(/\/$/,'').replace(/\/api\/webdav$/,'')+'/api/webdav',{method:'GET',mode:'cors'});if(!pr.ok)throw new Error('代理返回 '+pr.status);const health=await pr.json();if(!health.ok)throw new Error('代理服务异常')}catch(pe){s.innerHTML=`<div class="wdav-status err">❌ 代理不可达: ${esc(pe.message)}。请确认代理地址正确且网络可访问</div>`;return}}
   await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'
 }catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
 
