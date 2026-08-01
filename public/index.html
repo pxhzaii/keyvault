@@ -404,17 +404,18 @@ async function kvPull(){
 }
 
 /* ===== WebDAV Backup ===== */
+// wdavReq: 通过代理发送 WebDAV 请求
+// 返回 { status, bodyText } — bodyText 是响应体的 UTF-8 文本（用于 GET 读取 base64 加密数据）
 async function wdavReq(method,path,body=null,rawBody=false){
   if(!cfg.wdavUrl)return toast('请先配置 WebDAV','err'),Promise.reject(new Error('未配置 WebDAV'));
   const targetUrl=cfg.wdavUrl.replace(/\/$/,'')+path;
   const h={};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
   if(cfg.wdavUser)h['Authorization']='Basic '+toB64(new TextEncoder().encode(cfg.wdavUser+':'+cfg.wdavPass));
   let proxyUrl;
+  const useVercel=!!cfg.wdavProxy; // Vercel 代理返回 JSON 包装
   if(cfg.wdavProxy){
-    // 用户配置了外部代理（如 Vercel），优先使用
     proxyUrl=cfg.wdavProxy.replace(/\/$/,'')+'?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
   }else if(cfg.apiBase){
-    // 回退到 Cloudflare 同域代理（坚果云等 Cloudflare 站点会 520，仅对非 CF 目标有效）
     proxyUrl=cfg.apiBase+'/api/webdav-proxy?method='+encodeURIComponent(method)+'&url='+encodeURIComponent(targetUrl);
     if(apiToken)h['X-Api-Token']=apiToken;
   }else{
@@ -422,7 +423,24 @@ async function wdavReq(method,path,body=null,rawBody=false){
   }
   const opts={method:'POST',headers:h,mode:'cors'};
   if(body)opts.body=rawBody?body:JSON.stringify(body);
-  const res=await fetch(proxyUrl,opts);if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);return res;
+  const res=await fetch(proxyUrl,opts);
+  if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);
+  // 解析代理响应
+  if(useVercel){
+    const json=await res.json();
+    const status=json.status||res.status;
+    if(status>=400)throw new Error(`WebDAV ${method}: ${status}`);
+    // bodyB64 是代理把原始响应体 base64 编码后返回的，解码得到原始文本
+    let bodyText='';
+    if(json.bodyB64){
+      bodyText=atob(json.bodyB64);
+    }
+    return {status,bodyText};
+  }else{
+    // CF 同域代理直接返回原始响应
+    const bodyText=await res.text();
+    return {status:res.status,bodyText};
+  }
 }
 async function wdavTest(){
   try{
@@ -468,10 +486,7 @@ async function wdavPull(){
   toast('从 WebDAV 拉取...','info');
   try{
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
-    const res=await wdavReq('GET',p);
-    // 使用 arrayBuffer 读取，避免 CF CDN gzip 压缩导致 text() 拿到乱码
-    const buf=await res.arrayBuffer();
-    const b64=new TextDecoder().decode(buf);
+    const {bodyText:b64}=await wdavReq('GET',p);
     const data=await dec(b64,mk);
     if(!data.entries||!Array.isArray(data.entries))throw new Error('格式无效');
     let added=0,updated=0;
