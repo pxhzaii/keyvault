@@ -1,0 +1,7 @@
+name = "keyvault"
+pages_build_output_dir = "./public"
+compatibility_date = "2026-08-01"
+
+[[kv_namespaces]]
+binding = "KEYVAULT_KV"
+id = "bd863eed21d04870bfb1dccb4d699873"
