@@ -547,6 +547,8 @@ async function handleSetup(){
     failCount=0;lockUntil=0;
     await initKvToken();
     await loadEntries();const vData=await idbGet(CF,'vaultVersion');if(vData)vaultVersion=vData.v||0;
+    // 创建后尝试从 KV 拉取已有数据（新设备场景：另一台浏览器已推送过）
+    if(cfg.apiBase){try{await kvPull()}catch(e){}}
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
@@ -696,7 +698,7 @@ async function showBackupReminder(){
 }
 
 /* ===== Config ===== */
-function loadCfg(){try{const s=localStorage.getItem('kv_cfg');if(s){const c=JSON.parse(s);if(c.wdavPass&&typeof c.wdavPass==='string'&&c.wdavPass.startsWith('enc:'))c.wdavPass=atob(c.wdavPass.slice(4));Object.assign(cfg,c)}}catch(e){}applyDark()}
+function loadCfg(){try{const s=localStorage.getItem('kv_cfg');if(s){const c=JSON.parse(s);if(c.wdavPass&&typeof c.wdavPass==='string'&&c.wdavPass.startsWith('enc:'))c.wdavPass=atob(c.wdavPass.slice(4));Object.assign(cfg,c)}}catch(e){}if(!cfg.apiBase&&location.protocol==='https:')cfg.apiBase=location.origin;applyDark()}
 function saveCfg(){const c={...cfg};if(c.wdavPass)c.wdavPass='enc:'+btoa(c.wdavPass);localStorage.setItem('kv_cfg',JSON.stringify(c))}
 function tryB64Dec(s){try{return atob(s)}catch(e){return s}}
 function applyDark(){document.body.classList.toggle('dark',cfg.dark)}
