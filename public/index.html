@@ -259,31 +259,18 @@ const CB_TIMEOUT=30000;
 
 /* ===== State ===== */
 let db=null,mk=null,apiToken=null,curPwd=null,curView='all',entries=[],lockTimer=null,totpInterval=null,vaultVersion=0;
-let SALT=null; // 设备随机盐，从 IndexedDB 加载
+let SALT=null; // 从主密码确定性派生的盐，同密码 = 同盐
 let isOffline=false; // 离线模式标记
 let failCount=0,lockUntil=0,lockdownTimer=null; // 暴力破解防护
 let cfg={dark:false,autoLock:5,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
 
-/* ===== 设备随机盐 ===== */
-// 首次创建时生成 32 字节随机盐存入 IndexedDB，每台设备不同
-// 增强暴力破解成本：攻击者拿到盐也无法用通用彩虹表
-async function getOrCreateSalt(){
-  const stored=await idbGet(CF,'deviceSalt');
-  if(stored&&stored.v){
-    const arr=[];for(const c of stored.v)arr.push(c);
-    SALT=new Uint8Array(arr);
-  }else{
-    SALT=crypto.getRandomValues(new Uint8Array(32));
-    const arr=[];for(let i=0;i<SALT.length;i++)arr.push(SALT[i]);
-    await idbPut(CF,{k:'deviceSalt',v:arr});
-  }
-}
-// 加密导出时包含盐，以便其他设备导入恢复
-async function exportWithSalt(){return Array.from(SALT)}
-async function importWithSalt(saltArr){
-  SALT=new Uint8Array(saltArr);
-  const arr=[];for(let i=0;i<SALT.length;i++)arr.push(SALT[i]);
-  await idbPut(CF,{k:'deviceSalt',v:arr});
+/* ===== 确定性盐派生 ===== */
+// 从主密码派生盐：同密码 = 同盐，不同密码 = 不同盐
+// 优点：多浏览器/设备同密码可互通，无需同步盐
+// 安全性：SHA-256 是单向函数，盐无法反推密码
+async function deriveSalt(pwd){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('KeyVault-Salt:'+pwd));
+  return new Uint8Array(buf);
 }
 
 /* ===== Base64 分块编解码（避免大数组 btoa/atob 栈溢出） ===== */
@@ -292,12 +279,12 @@ function fromB64(b64){const bin=atob(b64);const buf=new Uint8Array(bin.length);f
 
 /* ===== Crypto ===== */
 async function deriveKey(pwd){
-  if(!SALT)await getOrCreateSalt();
+  if(!SALT)SALT=await deriveSalt(pwd);
   const raw=await crypto.subtle.importKey('raw',new TextEncoder().encode(pwd),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt:SALT,iterations:600000,hash:'SHA-256'},raw,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
 async function deriveApiToken(pwd){
-  if(!SALT)await getOrCreateSalt();
+  if(!SALT)SALT=await deriveSalt(pwd);
   const raw=await crypto.subtle.importKey('raw',new TextEncoder().encode(pwd),'PBKDF2',false,['deriveKey']);
   const tokenSalt=new Uint8Array([...SALT,84,111,107,101,110]); // SALT + 'Token'
   const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:tokenSalt,iterations:100000,hash:'SHA-256'},raw,{name:'HMAC',hash:'SHA-256'},true,['sign']);
@@ -339,16 +326,15 @@ async function hardDel(id){entries=entries.filter(e=>e.id!==id);await idbDel(ST,
 async function initKvToken(){
   if(!cfg.apiBase||!apiToken)return false;
   try{
-    const th=await idbGet(CF,'tokenHash');
-    if(!th||!th.v)return false;
-    const res=await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th.v})});
+    const th=await sha256(apiToken);
+    const res=await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th})});
     return res.ok;
   }catch(e){return false}
 }
 
 /* ===== KV Cloud Sync ===== */
-// kvPush: 推送加密数据 + deviceSalt 到 KV
-// kvPull: 拉取时先尝试恢复 salt（清除浏览器后同密码可恢复数据）
+// kvPush: 推送加密数据到 KV（不再需要传 salt，盐从密码派生）
+// kvPull: 拉取加密数据并解密
 async function kvPush(){
   if(!requireOnline())return;
   if(!cfg.apiBase||!apiToken)return toast('请先配置云端同步','err');
@@ -356,9 +342,8 @@ async function kvPush(){
   try{
     const all=entries.filter(e=>!e.deleted);
     const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
-    const saltArr=Array.from(SALT);
-    let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion,salt:saltArr})});
-    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion,salt:saltArr})})}
+    let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
+    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
   }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
@@ -372,21 +357,12 @@ async function kvPull(){
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}})}
     if(res.status===404){toast('云端暂无数据','info');return}
     if(!res.ok)throw new Error(await res.text());
-    const {data,version,salt}=await res.json();
-    // 如果云端有 salt 且本地没有（清浏览器后），先恢复 salt
-    if(salt&&Array.isArray(salt)&&salt.length===32){
-      const localSalt=await idbGet(CF,'deviceSalt');
-      if(!localSalt||!localSalt.v){
-        await importWithSalt(salt);
-        // 用恢复的盐重新派生密钥
-        if(curPwd){mk=await deriveKey(curPwd);apiToken=await deriveApiToken(curPwd)}
-      }
-    }
+    const {data,version}=await res.json();
     let remote;
     try{
       remote=await dec(data,mk);
     }catch(e){
-      toast('拉取失败: 云端数据由其他主密码加密，无法解密。如需覆盖请先推送本地数据','err');
+      toast('拉取失败: 无法解密云端数据。请确认主密码一致，或推送本地数据覆盖','err');
       return;
     }
     if(!remote.entries||!Array.isArray(remote.entries))throw new Error('格式无效');
@@ -523,8 +499,8 @@ async function genTOTP(secret){try{const key=b32dec(secret),epoch=Math.floor(Dat
 /* ===== Import/Export ===== */
 function dl(name,content,type){const b=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href)}
 async function doExportJSON(){const all=entries.filter(e=>!e.deleted);dl('keyvault-export.json',JSON.stringify({format:'keyvault',version:1,exportedAt:Date.now(),entries:all},null,2),'application/json');toast('导出成功','ok')}
-async function doExportEnc(){const all=entries.filter(e=>!e.deleted);const data=await enc({entries:all,salt:await exportWithSalt(),exportedAt:Date.now()},mk);dl('keyvault-vault.enc',data,'application/octet-stream');toast('加密导出成功（含设备盐，可用于跨设备恢复）','ok')}
-async function doImport(file){try{const text=await file.text();let imported=[];let importedSalt=null;if(file.name.endsWith('.enc')){const data=await dec(text.trim(),mk);if(data.salt)importedSalt=data.salt;if(data.entries&&Array.isArray(data.entries))imported=data.entries;else throw new Error('加密文件格式无效')}else if(file.name.endsWith('.csv')){const lines=text.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('CSV为空');const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());for(let i=1;i<lines.length;i++){const v=lines[i].split(',');const o={};headers.forEach((h,j)=>o[h]=v[j]?v[j].trim():'');imported.push({name:o.name||o.title||'未命名',username:o.username||o.user||'',password:o.password||o.pass||'',url:o.url||o.website||'',notes:o.notes||o.note||'',category:o.category||o.type||'other',customFields:[],tags:[],totpSecret:o.totp||''})}}else{const data=JSON.parse(text);if(data.format==='keyvault'&&data.entries)imported=data.entries;else if(data.items&&Array.isArray(data.items))imported=data.items.map(it=>({name:it.name||'',username:it.login?.username||'',password:it.login?.password||'',url:it.login?.uris?.[0]?.uri||'',notes:it.notes||'',category:'other',customFields:[],tags:[],totpSecret:it.login?.totp||''}));else if(Array.isArray(data))imported=data;else throw new Error('无法识别的格式')}if(importedSalt)await importWithSalt(importedSalt);let count=0;for(const e of imported){if(!e.name)continue;e.id=e.id||uid();e.customFields=e.customFields||[];e.tags=e.tags||[];e.passwordHistory=e.passwordHistory||[];e.createdAt=e.createdAt||Date.now();e.updatedAt=e.updatedAt||Date.now();e.deleted=false;e.deletedAt=null;e.category=e.category||'other';await saveEntry(e);entries.push(e);count++}toast(`导入 ${count} 条记录${importedSalt?'（已恢复设备盐）':''}`,'ok');render();renderSB()}catch(e){toast('导入失败: '+e.message,'err')}}
+async function doExportEnc(){const all=entries.filter(e=>!e.deleted);const data=await enc({entries:all,exportedAt:Date.now()},mk);dl('keyvault-vault.enc',data,'application/octet-stream');toast('加密导出成功（同主密码可在任何设备导入恢复）','ok')}
+async function doImport(file){try{const text=await file.text();let imported=[];if(file.name.endsWith('.enc')){const data=await dec(text.trim(),mk);if(data.entries&&Array.isArray(data.entries))imported=data.entries;else throw new Error('加密文件格式无效')}else if(file.name.endsWith('.csv')){const lines=text.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('CSV为空');const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());for(let i=1;i<lines.length;i++){const v=lines[i].split(',');const o={};headers.forEach((h,j)=>o[h]=v[j]?v[j].trim():'');imported.push({name:o.name||o.title||'未命名',username:o.username||o.user||'',password:o.password||o.pass||'',url:o.url||o.website||'',notes:o.notes||o.note||'',category:o.category||o.type||'other',customFields:[],tags:[],totpSecret:o.totp||''})}}else{const data=JSON.parse(text);if(data.format==='keyvault'&&data.entries)imported=data.entries;else if(data.items&&Array.isArray(data.items))imported=data.items.map(it=>({name:it.name||'',username:it.login?.username||'',password:it.login?.password||'',url:it.login?.uris?.[0]?.uri||'',notes:it.notes||'',category:'other',customFields:[],tags:[],totpSecret:it.login?.totp||''}));else if(Array.isArray(data))imported=data;else throw new Error('无法识别的格式')}toast(`导入 ${count} 条记录`,'ok');render();renderSB()}catch(e){toast('导入失败: '+e.message,'err')}}
 
 /* ===== Clipboard ===== */
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('已复制','ok');setTimeout(()=>{navigator.clipboard.readText().then(t=>{if(t===text)navigator.clipboard.writeText('')}).catch(()=>{})},CB_TIMEOUT)}catch(e){toast('复制失败','err')}}
@@ -564,7 +540,7 @@ async function handleSetup(){
   if(pwd.length<4){err.textContent='密码至少4位';return}
   if(pwd!==pwd2){err.textContent='两次密码不一致';return}
   try{
-    mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
+    SALT=await deriveSalt(pwd);mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
     const h=await sha256(pwd+Array.from(SALT).join(','));const th=await sha256(apiToken);
     await idbPut(CF,{k:'vaultHash',v:h});await idbPut(CF,{k:'created',v:Date.now()});await idbPut(CF,{k:'tokenHash',v:th});
     if(cfg.apiBase){try{const th2=await sha256(apiToken);await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th2})})}catch(e){}}
@@ -591,17 +567,62 @@ async function handleUnlock(){
   }
   const err=document.getElementById('lockErr');
   try{
-    await getOrCreateSalt();mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
+    SALT=await deriveSalt(pwd);mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
     const h=await sha256(pwd+Array.from(SALT).join(','));const stored=await idbGet(CF,'vaultHash');
     if(h!==stored.v){
-        failCount++;
-        const delay=getLockDelay();
-        lockUntil=now+delay;
-        err.textContent=`密码错误（第${failCount}次），请等待 ${formatDelay(delay)} 后重试`;
-        document.getElementById('masterPwd').disabled=true;
-        clearTimeout(lockdownTimer);
-        lockdownTimer=setTimeout(updateLockUI,1000);
-        mk=null;apiToken=null;return
+      // 新确定性盐验证失败，尝试旧随机盐迁移
+      const oldSaltData=await idbGet(CF,'deviceSalt');
+      if(oldSaltData&&oldSaltData.v){
+        const oldArr=[];for(const c of oldSaltData.v)oldArr.push(c);
+        const oldSalt=new Uint8Array(oldArr);
+        const oldH=await sha256(pwd+Array.from(oldSalt).join(','));
+        if(oldH===stored.v){
+          // 旧盐验证通过！用旧盐解密所有数据，再用新盐重新加密（迁移）
+          toast('正在迁移加密数据...','info');
+          const oldKey=await deriveKey(pwd); // 此时 SALT=旧值不对，需要手动
+          // 临时用旧盐派生密钥
+          const oldRaw=await crypto.subtle.importKey('raw',new TextEncoder().encode(pwd),'PBKDF2',false,['deriveKey']);
+          const oldMk=await crypto.subtle.deriveKey({name:'PBKDF2',salt:oldSalt,iterations:600000,hash:'SHA-256'},oldRaw,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+          // 用旧密钥解密所有条目
+          const allItems=await idbAll(ST);
+          const migrated=[];
+          for(const item of allItems){
+            try{
+              const e=await dec(item.data,oldMk);
+              migrated.push({item,e});
+            }catch(e){}
+          }
+          // 切换到新确定性盐
+          SALT=await deriveSalt(pwd);
+          mk=await deriveKey(pwd);
+          apiToken=await deriveApiToken(pwd);
+          // 用新密钥重新加密所有条目
+          for(const {item,e} of migrated){
+            const newData=await enc(e,mk);
+            await idbPut(ST,{id:item.id,data:newData,cat:item.cat,del:item.del,delAt:item.delAt});
+          }
+          // 更新 vaultHash 和 tokenHash
+          const newH=await sha256(pwd+Array.from(SALT).join(','));
+          const newTh=await sha256(apiToken);
+          await idbPut(CF,{k:'vaultHash',v:newH});
+          await idbPut(CF,{k:'tokenHash',v:newTh});
+          // 清除旧随机盐
+          await idbPut(CF,{k:'deviceSalt',v:null});
+          toast('迁移完成！数据已用新加密方式重新加密','ok');
+        }else{
+          failCount++;const delay=getLockDelay();lockUntil=now+delay;
+          err.textContent=`密码错误（第${failCount}次），请等待 ${formatDelay(delay)} 后重试`;
+          document.getElementById('masterPwd').disabled=true;
+          clearTimeout(lockdownTimer);lockdownTimer=setTimeout(updateLockUI,1000);
+          mk=null;apiToken=null;SALT=null;return
+        }
+      }else{
+          failCount++;const delay=getLockDelay();lockUntil=now+delay;
+          err.textContent=`密码错误（第${failCount}次），请等待 ${formatDelay(delay)} 后重试`;
+          document.getElementById('masterPwd').disabled=true;
+          clearTimeout(lockdownTimer);lockdownTimer=setTimeout(updateLockUI,1000);
+          mk=null;apiToken=null;SALT=null;return
+        }
     }
     // 解锁成功，重置计数
     failCount=0;lockUntil=0;clearTimeout(lockdownTimer);
@@ -613,7 +634,7 @@ async function handleUnlock(){
     loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
-function lockVault(){mk=null;apiToken=null;curPwd=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
+function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
