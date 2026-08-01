@@ -168,6 +168,10 @@ async function handleWebdavProxy(request, env) {
     }
   }
   
+  // 从 X-WebDAV-Method 头取出真实的 WebDAV 方法
+  // 前端统一用 POST 发请求（因为 Cloudflare 边缘不转发 MKCOL/PROPFIND 等非标准方法，直接 520）
+  const realMethod = request.headers.get('x-webdav-method') || request.method;
+  
   // 只转发 WebDAV 需要的头，避免把浏览器/Cloudflare 内部头转发给目标服务器
   // 导致目标服务器返回异常响应，Cloudflare 边缘无法解析产生 520
   const headers = new Headers();
@@ -178,11 +182,12 @@ async function handleWebdavProxy(request, env) {
   }
   
   const init = {
-    method: request.method,
+    method: realMethod,
     headers,
   };
   
-  if (['POST', 'PUT', 'PATCH', 'MKCOL'].includes(request.method) && request.body) {
+  // MKCOL/PROPFIND 没有 body，不要传 body 过去
+  if (['POST', 'PUT', 'PATCH'].includes(realMethod) && request.body) {
     init.body = request.body;
   }
   
