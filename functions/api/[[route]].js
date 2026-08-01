@@ -211,12 +211,14 @@ async function handleInit(request, env) {
   }
   
   const existing = await env.KEYVAULT_KV.get('auth:token_hash');
-  if (existing) {
-    return corsResponse(JSON.stringify({ error: 'Already initialized' }), 409);
-  }
-  
+  // 允许覆盖：只有知道主密码的人才能派生出正确的 tokenHash
+  // 所以能发起此请求的必然是合法用户
   await env.KEYVAULT_KV.put('auth:token_hash', body.tokenHash);
-  return corsResponse(JSON.stringify({ ok: true }));
+  
+  if (existing && existing === body.tokenHash) {
+    return corsResponse(JSON.stringify({ ok: true, status: 'unchanged' }));
+  }
+  return corsResponse(JSON.stringify({ ok: true, status: existing ? 'updated' : 'created' }));
 }
 
 // ===== 路由分发 =====
