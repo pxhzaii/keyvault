@@ -294,7 +294,7 @@ async function dec(b64,key){
 async function sha256(s){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return toB64(new Uint8Array(buf))}
 
 /* ===== IndexedDB ===== */
-function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,VER);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(ST))d.createObjectStore(ST,{keyPath:'id'});if(!d.objectStoreNames.contains(CF))d.createObjectStore(CF,{keyPath:'k'});};r.onsuccess=e=>{db=e.target.result;ok(db)};r.onerror=e=>no(e)})
+function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,VER);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(ST))d.createObjectStore(ST,{keyPath:'id'});if(!d.objectStoreNames.contains(CF))d.createObjectStore(CF,{keyPath:'k'});};r.onsuccess=e=>{db=e.target.result;ok(db)};r.onerror=e=>no(e)})}
 function idbOp(store,mode,fn){return new Promise((ok,no)=>{const tx=db.transaction(store,mode);const s=tx.objectStore(store);const r=fn(s);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 const idbGet=(s,k)=>idbOp(s,'readonly',st=>st.get(k));
 const idbPut=(s,v)=>idbOp(s,'readwrite',st=>st.put(v));
@@ -490,7 +490,7 @@ async function handleUnlock(){
         clearTimeout(lockdownTimer);
         lockdownTimer=setTimeout(updateLockUI,1000);
         mk=null;apiToken=null;return
-      }
+    }
     // 解锁成功，重置计数
     failCount=0;lockUntil=0;clearTimeout(lockdownTimer);
     await loadEntries();const vData=await idbGet(CF,'vaultVersion');if(vData)vaultVersion=vData.v||0;
