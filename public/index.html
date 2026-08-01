@@ -424,12 +424,14 @@ async function wdavReq(method,path,body=null,rawBody=false){
   const opts={method:'POST',headers:h,mode:'cors'};
   if(body)opts.body=rawBody?body:JSON.stringify(body);
   const res=await fetch(proxyUrl,opts);
-  if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);
   // 解析代理响应
   if(useVercel){
     const json=await res.json();
     const status=json.status||res.status;
-    if(status>=400)throw new Error(`WebDAV ${method}: ${status}`);
+    if(status>=400){
+      const errMsg=json.error||`WebDAV ${method}: ${status}`;
+      throw new Error(errMsg);
+    }
     // bodyB64 是代理把原始响应体 base64 编码后返回的，解码得到原始文本
     let bodyText='';
     if(json.bodyB64){
@@ -438,6 +440,7 @@ async function wdavReq(method,path,body=null,rawBody=false){
     return {status,bodyText};
   }else{
     // CF 同域代理直接返回原始响应
+    if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);
     const bodyText=await res.text();
     return {status:res.status,bodyText};
   }
@@ -730,7 +733,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
   <div class="acc-card" id="accWdav" onclick="toggleAccCard('accWdav')">
     <div class="acc-card-head"><span class="icon">📦</span><div class="info"><div class="title">WebDAV 备份</div><div class="desc">异地备份 · 坚果云等</div></div><span class="arrow">▼</span></div>
     <div class="acc-card-body" onclick="event.stopPropagation()">
-      <div class="fg"><label class="fl">服务类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguop')?'selected':''}>坚果云</option></select></div>
+      <div class="fg"><label class="fl">服务类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/';if(!document.getElementById('wdavProxy').value)document.getElementById('wdavProxy').value='https://webdav.5as.cn/api/webdav'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguoyun')?'selected':''}>坚果云</option></select></div>
       <div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div>
       <div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div>
       <div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div>
@@ -750,7 +753,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
   // 先测代理本身是否可达
-  if(cfg.wdavProxy){try{const pr=await fetch(cfg.wdavProxy.replace(/\/$/,'').replace(/\/api\/webdav$/,'')+'/api/webdav',{method:'GET',mode:'cors'});if(!pr.ok)throw new Error('status '+pr.status)}catch(pe){s.innerHTML=`<div class="wdav-status err">❌ 代理不可达: ${esc(pe.message)}。请确认代理地址正确且网络可访问</div>`;return}}
+  if(cfg.wdavProxy){try{    const pr=await fetch(cfg.wdavProxy.replace(/\/$/,'').replace(/\/api\/webdav$/,'')+'/api/webdav',{method:'GET',mode:'cors'});if(!pr.ok)throw new Error('代理返回 '+pr.status);const health=await pr.json();if(!health.ok)throw new Error('代理服务异常')}catch(pe){s.innerHTML=`<div class="wdav-status err">❌ 代理不可达: ${esc(pe.message)}。请确认代理地址正确且网络可访问</div>`;return}}
   await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'
 }catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
 
