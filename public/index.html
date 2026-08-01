@@ -262,7 +262,7 @@ let db=null,mk=null,apiToken=null,curPwd=null,curView='all',entries=[],lockTimer
 let SALT=null; // 从主密码确定性派生的盐，同密码 = 同盐
 let isOffline=false; // 离线模式标记
 let failCount=0,lockUntil=0,lockdownTimer=null; // 暴力破解防护
-let cfg={dark:false,autoLock:5,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
+let cfg={dark:false,autoLock:5,keepUnlocked:true,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
 
 /* ===== 确定性盐派生 ===== */
 // 从主密码派生盐：同密码 = 同盐，不同密码 = 不同盐
@@ -531,6 +531,10 @@ function updateLockUI(){
   }
 }
 
+// 解锁成功后，如果 keepUnlocked 开启，把主密码存 sessionStorage（关闭标签页自动清空）
+function keepPwd(pwd){if(cfg.keepUnlocked)try{sessionStorage.setItem('kv_pwd',pwd)}catch(e){}}
+function clearKeepPwd(){try{sessionStorage.removeItem('kv_pwd')}catch(e){}}
+
 /* ===== Setup (首次创建保险库) ===== */
 async function handleSetup(){
   const pwd=document.getElementById('setupPwd').value;
@@ -553,7 +557,7 @@ async function handleSetup(){
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
     loadCfg();resetLock();detectNetwork();renderSB();render();
-    toast('保险库创建成功','ok');
+    toast('保险库创建成功','ok');keepPwd(pwd);
   }catch(e){err.textContent='创建失败';mk=null;apiToken=null}
 }
 
@@ -633,10 +637,10 @@ async function handleUnlock(){
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
-    loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder()
+    loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd)
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
-function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
+function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
@@ -698,7 +702,7 @@ async function showBackupReminder(){
 }
 
 /* ===== Config ===== */
-function loadCfg(){try{const s=localStorage.getItem('kv_cfg');if(s){const c=JSON.parse(s);if(c.wdavPass&&typeof c.wdavPass==='string'&&c.wdavPass.startsWith('enc:'))c.wdavPass=atob(c.wdavPass.slice(4));Object.assign(cfg,c)}}catch(e){}if(!cfg.apiBase&&location.protocol==='https:')cfg.apiBase=location.origin;applyDark()}
+function loadCfg(){try{const s=localStorage.getItem('kv_cfg');if(s){const c=JSON.parse(s);if(c.wdavPass&&typeof c.wdavPass==='string'&&c.wdavPass.startsWith('enc:'))c.wdavPass=atob(c.wdavPass.slice(4));Object.assign(cfg,c)}}catch(e){}if(!cfg.apiBase&&location.protocol==='https:')cfg.apiBase=location.origin;cfg.apiBase=cfg.apiBase.replace(/\/+$/,'');applyDark()}
 function saveCfg(){const c={...cfg};if(c.wdavPass)c.wdavPass='enc:'+btoa(c.wdavPass);localStorage.setItem('kv_cfg',JSON.stringify(c))}
 function tryB64Dec(s){try{return atob(s)}catch(e){return s}}
 function applyDark(){document.body.classList.toggle('dark',cfg.dark)}
@@ -742,7 +746,7 @@ function toggleAccCard(id){
   card.classList.toggle('active');
 }
 function showSettings(){document.getElementById('moTitle').textContent='设置';const h=`
-<div class="stg-sec"><h3>🎨 外观</h3><div class="stg-item"><div class="stg-info"><h4>深色模式</h4><p>切换深色/浅色主题</p></div><div class="toggle ${cfg.dark?'on':''}" onclick="this.classList.toggle('on');cfg.dark=this.classList.contains('on');applyDark();saveCfg()"></div></div><div class="stg-item"><div class="stg-info"><h4>自动锁定</h4><p>无操作后自动锁定</p></div><select style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font-size:13px" onchange="cfg.autoLock=+this.value;saveCfg();resetLock()"><option value="0" ${cfg.autoLock===0?'selected':''}>不锁定</option><option value="1" ${cfg.autoLock===1?'selected':''}>1分钟</option><option value="3" ${cfg.autoLock===3?'selected':''}>3分钟</option><option value="5" ${cfg.autoLock===5?'selected':''}>5分钟</option><option value="10" ${cfg.autoLock===10?'selected':''}>10分钟</option><option value="15" ${cfg.autoLock===15?'selected':''}>15分钟</option></select></div></div>
+<div class="stg-sec"><h3>🎨 外观</h3><div class="stg-item"><div class="stg-info"><h4>深色模式</h4><p>切换深色/浅色主题</p></div><div class="toggle ${cfg.dark?'on':''}" onclick="this.classList.toggle('on');cfg.dark=this.classList.contains('on');applyDark();saveCfg()"></div></div><div class="stg-item"><div class="stg-info"><h4>刷新保持解锁</h4><p>刷新页面后自动恢复解锁状态（关闭标签页仍会锁定）</p></div><div class="toggle ${cfg.keepUnlocked?'on':''}" onclick="this.classList.toggle('on');cfg.keepUnlocked=this.classList.contains('on');if(!cfg.keepUnlocked)clearKeepPwd();saveCfg()"></div></div><div class="stg-item"><div class="stg-info"><h4>自动锁定</h4><p>无操作后自动锁定</p></div><select style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font-size:13px" onchange="cfg.autoLock=+this.value;saveCfg();resetLock()"><option value="0" ${cfg.autoLock===0?'selected':''}>不锁定</option><option value="1" ${cfg.autoLock===1?'selected':''}>1分钟</option><option value="3" ${cfg.autoLock===3?'selected':''}>3分钟</option><option value="5" ${cfg.autoLock===5?'selected':''}>5分钟</option><option value="10" ${cfg.autoLock===10?'selected':''}>10分钟</option><option value="15" ${cfg.autoLock===15?'selected':''}>15分钟</option></select></div></div>
 
 <div class="acc-cards">
   <div class="acc-card" id="accKv" onclick="toggleAccCard('accKv')">
@@ -773,7 +777,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 <div class="stg-sec"><h3>📥 导入 / 📤 导出</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-g btn-sm" onclick="doExportJSON()">📄 导出 JSON</button><button class="btn btn-g btn-sm" onclick="doExportEnc()">🔒 加密导出</button></div><div class="ie-area" onclick="document.getElementById('impF').click()"><p>📂 点击导入文件</p><p style="font-size:12px;color:var(--tx3);margin-top:4px">KeyVault JSON / Bitwarden JSON / CSV</p></div><input type="file" id="impF" style="display:none" accept=".json,.csv" onchange="doImport(this.files[0]);this.value=''"></div>
 <div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> — 三端同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，遗忘无法恢复</p></div></div>
 `;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
-function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
+function saveAllSettings(){cfg.apiBase=(document.getElementById('apiBase')?.value.trim()||cfg.apiBase).replace(/\/+$/,'');cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
   await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'
 }catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
@@ -787,7 +791,9 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function escA(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\r/g,'').replace(/\n/g,'\\n')}
 
 /* ===== Init ===== */
-(async function(){await openDB();const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none'})();
+(async function(){await openDB();const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
+// 尝试从 sessionStorage 恢复解锁状态
+loadCfg();const savedPwd=cfg.keepUnlocked?sessionStorage.getItem('kv_pwd'):null;if(savedPwd&&hash){document.getElementById('masterPwd').value=savedPwd;handleUnlock()}})();
 </script>
 </body>
 </html>
