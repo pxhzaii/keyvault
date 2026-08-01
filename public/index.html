@@ -41,8 +41,10 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 .sb-foot button{flex:1;padding:8px;border-radius:var(--rs);font-size:12px;background:var(--bg3);color:var(--tx2);font-weight:500}
 .sb-foot button:hover{background:var(--ac-l2);color:var(--ac)}
 .sb-sync{padding:8px 12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3)}
-.sb-sync .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
-.sb-sync .dot.ok{background:var(--ok)}.sb-sync .dot.off{background:var(--tx3)}.sb-sync .dot.err{background:var(--danger)}
+.ec-check{width:22px;height:22px;border:2px solid var(--bd);border-radius:6px;cursor:pointer;flex-shrink:0;display:none;align-items:center;justify-content:center;font-size:13px;transition:var(--t)}.select-mode .ec-check{display:flex}.select-mode .ec{cursor:default}.ec-check.checked{background:var(--ac);border-color:var(--ac);color:#fff}
+.batch-bar{display:none;align-items:center;gap:12px;padding:10px 24px;background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0}.batch-bar.show{display:flex}.batch-bar .batch-info{font-size:13px;color:var(--tx2);font-weight:600}.batch-bar .batch-info strong{color:var(--ac)}
+.sync-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.sync-btn{padding:7px 12px;border-radius:var(--rs);font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:var(--t)}.sync-btn:hover{border-color:var(--ac);color:var(--ac)}.sync-btn.push{color:var(--ac)}.sync-btn.pull{color:var(--tx3)}
+.sb-syncs{padding:8px 12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3);line-height:1.8}.sb-syncs .row{display:flex;align-items:center;gap:6px}.sb-syncs .dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0}.sb-syncs .dot.ok{background:var(--ok)}.sb-syncs .dot.off{background:var(--tx3)}.sb-syncs .dot.err{background:var(--danger)}
 
 .mn{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .toolbar{padding:14px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
@@ -184,7 +186,7 @@ textarea.fi{resize:vertical;min-height:60px}
 @media(max-width:768px){
   .sb{position:fixed;height:100%;transform:translateX(-100%);transition:transform .3s;z-index:100}
   .sb.open{transform:translateX(0)}.sb-mask{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;display:none}.sb-mask.show{display:block}
-  .mob-btn{display:flex!important}.ct{padding:12px}.toolbar{padding:10px 14px;gap:8px}
+  .mob-btn{display:flex!important}.ct{padding:12px}.toolbar{padding:10px 14px;gap:8px;flex-wrap:wrap}
   .search{max-width:100%;order:1;flex-basis:100%}.mo-box{width:100%;max-height:100vh;border-radius:0;max-width:100%}
   .fr{flex-direction:column}.ec-acts{opacity:1}.dv-acts{flex-direction:column}
   .acc-cards{flex-direction:column}
@@ -197,6 +199,8 @@ textarea.fi{resize:vertical;min-height:60px}
   .lock-box{padding:32px 24px}
   .lock-icon{font-size:42px}
   .lock-box h1{font-size:22px}
+  .sync-bar{order:2;flex-basis:100%}
+  .batch-bar{flex-wrap:wrap;gap:8px!important}
 }
 .mob-btn{display:none!important;width:36px;height:36px;align-items:center;justify-content:center;border-radius:var(--rs);font-size:17px;background:var(--bg3);color:var(--tx2)}
 </style>
@@ -233,14 +237,25 @@ textarea.fi{resize:vertical;min-height:60px}
   <aside class="sb" id="sidebar">
     <div class="sb-head"><span class="logo">🔐</span><h2>KeyVault</h2></div>
     <nav class="sb-nav" id="sbNav"></nav>
-    <div class="sb-sync" id="sbSync"><span class="dot off"></span>未连接</div>
+    <div class="sb-syncs" id="sbSyncs">
+      <div class="row"><span class="dot off" id="kvDot"></span> <span id="kvStatus">KV 未配置</span></div>
+      <div class="row" style="margin-top:3px"><span class="dot off" id="wdavDot"></span> <span id="wdavStatus">WebDAV 未配置</span></div>
+    </div>
     <div class="sb-foot"><button onclick="lockVault()">🔒 锁定</button></div>
   </aside>
   <div class="mn">
     <div class="toolbar">
       <button class="mob-btn" onclick="openSB()">☰</button>
       <div class="search"><input id="searchInput" placeholder="搜索名称、用户名、网址..." oninput="filterEntries()"></div>
-      <div class="tb-actions"><button class="btn btn-g btn-sm" onclick="showSettings()">⚙️</button><button class="btn btn-p" onclick="showAddEntry()">＋ 添加</button></div>
+      <div class="sync-bar" id="syncBar"></div>
+      <div class="tb-actions"><button class="btn btn-g btn-sm" id="manageBtn" onclick="toggleSelectMode()">管理</button><button class="btn btn-g btn-sm" onclick="showSettings()">⚙️</button><button class="btn btn-p" onclick="showAddEntry()">＋ 添加</button></div>
+    </div>
+    <div class="batch-bar" id="batchBar">
+      <div class="batch-info">已选 <strong id="batchCount">0</strong> 项</div>
+      <button class="btn btn-g btn-sm" onclick="selectAllEntries()">全选</button>
+      <button class="btn btn-g btn-sm" onclick="deselectAll()">取消全选</button>
+      <button class="btn btn-d btn-sm" onclick="batchDelete()">🗑️ 删除所选</button>
+      <button class="btn btn-g btn-sm" onclick="toggleSelectMode()" style="margin-left:auto">完成</button>
     </div>
     <div class="ct" id="content"></div>
   </div>
@@ -262,6 +277,7 @@ let db=null,mk=null,apiToken=null,curPwd=null,curView='all',entries=[],lockTimer
 let SALT=null; // 从主密码确定性派生的盐，同密码 = 同盐
 let isOffline=false; // 离线模式标记
 let failCount=0,lockUntil=0,lockdownTimer=null; // 暴力破解防护
+let selectMode=false,selectedIds=new Set(); // 多选模式
 let cfg={dark:false,autoLock:5,keepUnlocked:true,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
 
 /* ===== 确定性盐派生 ===== */
@@ -352,8 +368,8 @@ async function kvPush(){
     let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
-    toast('KV 推送成功','ok');updateSyncStatus('ok');await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-  }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatus('err')}
+    toast('KV 推送成功','ok');updateSyncStatusUI();await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
+  }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatusUI()}
 }
 async function kvPull(){
   if(!requireOnline())return;
@@ -391,8 +407,8 @@ async function kvPull(){
       else{await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
     }
     vaultVersion=version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-    toast(`拉取成功: 新增${added} 更新${updated}`,'ok');render();renderSB();updateSyncStatus('ok');
-  }catch(e){toast('拉取失败: '+e.message,'err');updateSyncStatus('err')}
+    toast(`拉取成功: 新增${added} 更新${updated}`,'ok');render();renderSB();updateSyncStatusUI();
+  }catch(e){toast('拉取失败: '+e.message,'err');updateSyncStatusUI()}
 }
 
 /* ===== WebDAV Backup ===== */
@@ -589,7 +605,7 @@ async function handleSetup(){
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
-    loadCfg();resetLock();detectNetwork();renderSB();render();
+    loadCfg();resetLock();detectNetwork();renderSB();render();renderSyncBar();
     toast('保险库创建成功','ok');keepPwd(pwd);
   }catch(e){err.textContent='创建失败';mk=null;apiToken=null}
 }
@@ -670,12 +686,15 @@ async function handleUnlock(){
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
-    loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd)
+    loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd);renderSyncBar()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
 function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
-function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
+function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)    lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
+
+// 首次渲染同步栏
+setTimeout(renderSyncBar,100);
 
 /* ===== Network Detection & Offline Mode ===== */
 let networkListenersAdded=false;
@@ -739,20 +758,63 @@ function loadCfg(){try{const s=localStorage.getItem('kv_cfg');if(s){const c=JSON
 function saveCfg(){const c={...cfg};if(c.wdavPass)c.wdavPass='enc:'+btoa(c.wdavPass);localStorage.setItem('kv_cfg',JSON.stringify(c))}
 function tryB64Dec(s){try{return atob(s)}catch(e){return s}}
 function applyDark(){document.body.classList.toggle('dark',cfg.dark)}
-function updateSyncStatus(s){const el=document.getElementById('sbSync');if(s==='ok')el.innerHTML='<span class="dot ok"></span>已连接';else if(s==='err')el.innerHTML='<span class="dot err"></span>连接失败';else el.innerHTML='<span class="dot off"></span>未连接'}
+function updateSyncStatus(s){/* 保留兼容但不再主要使用 */}
+function updateSyncStatusUI(){
+  const kvDot=document.getElementById('kvDot');const kvSt=document.getElementById('kvStatus');
+  const wdDot=document.getElementById('wdavDot');const wdSt=document.getElementById('wdavStatus');
+  if(!kvDot)return;
+  if(cfg.apiBase&&apiToken){kvDot.className='dot ok';kvSt.textContent='KV 已连接'}
+  else if(cfg.apiBase){kvDot.className='dot off';kvSt.textContent='KV 未认证'}
+  else{kvDot.className='dot off';kvSt.textContent='KV 未配置'}
+  if(cfg.wdavUrl){wdDot.className='dot ok';wdSt.textContent='WebDAV 已连接'}
+  else{wdDot.className='dot off';wdSt.textContent='WebDAV 未配置'}
+}
 
 /* ===== Sidebar ===== */
-function renderSB(){const nav=document.getElementById('sbNav');const trash=entries.filter(e=>e.deleted).length;let h='';CATS.forEach(c=>{const cnt=c.id==='all'?entries.filter(e=>!e.deleted).length:entries.filter(e=>e.category===c.id&&!e.deleted).length;h+=`<div class="sb-item ${curView===c.id?'active':''}" onclick="switchV('${c.id}')">${c.icon} ${c.name}${cnt?`<span class="badge">${cnt}</span>`:''}</div>`});h+=`<div class="sb-sep">工具</div>`;h+=`<div class="sb-item ${curView==='gen'?'active':''}" onclick="switchV('gen')">🎲 密码生成器</div>`;h+=`<div class="sb-item ${curView==='trash'?'active':''}" onclick="switchV('trash')">🗑️ 回收站${trash?`<span class="badge">${trash}</span>`:''}</div>`;nav.innerHTML=h;updateSyncStatus(cfg.apiBase?'ok':'off')}
+function renderSB(){const nav=document.getElementById('sbNav');const trash=entries.filter(e=>e.deleted).length;let h='';CATS.forEach(c=>{const cnt=c.id==='all'?entries.filter(e=>!e.deleted).length:entries.filter(e=>e.category===c.id&&!e.deleted).length;h+=`<div class="sb-item ${curView===c.id?'active':''}" onclick="switchV('${c.id}')">${c.icon} ${c.name}${cnt?`<span class="badge">${cnt}</span>`:''}</div>`});h+=`<div class="sb-sep">工具</div>`;h+=`<div class="sb-item ${curView==='gen'?'active':''}" onclick="switchV('gen')">🎲 密码生成器</div>`;h+=`<div class="sb-item ${curView==='trash'?'active':''}" onclick="switchV('trash')">🗑️ 回收站${trash?`<span class="badge">${trash}</span>`:''}</div>`;nav.innerHTML=h;updateSyncStatusUI()}
 function switchV(v){curView=v;renderSB();render();closeSB()}
 function openSB(){document.getElementById('sidebar').classList.add('open');document.getElementById('sbMask').classList.add('show')}
 function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbMask').classList.remove('show')}
 
 /* ===== Render ===== */
-function render(){const ct=document.getElementById('content');const search=document.getElementById('searchInput').value.toLowerCase();if(curView==='gen')return renderGen(ct);if(curView==='trash')return renderTrash(ct);let list=entries.filter(e=>!e.deleted);if(curView!=='all')list=list.filter(e=>e.category===curView);if(search)list=list.filter(e=>(e.name||'').toLowerCase().includes(search)||(e.username||'').toLowerCase().includes(search)||(e.url||'').toLowerCase().includes(search)||(e.tags||[]).some(t=>t.toLowerCase().includes(search)));list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));const cat=CATS.find(c=>c.id===curView)||CATS[0];let h=`<div class="ct-head"><h2>${cat.icon} ${cat.name}</h2><span class="meta">${list.length} 条</span></div>`;if(!list.length){h+=`<div class="empty"><div class="icon">📭</div><h3>暂无记录</h3><p>点击"添加"开始使用</p></div>`}else{h+=`<div class="el">`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];h+=`<div class="ec" onclick="showDetail('${e.id}')"><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">${esc(e.username||e.url||'')}</div></div><div class="ec-acts"><button onclick="event.stopPropagation();copy('${escA(e.password)}')" title="复制密码">📋</button><button onclick="event.stopPropagation();showEdit('${e.id}')" title="编辑">✏️</button></div></div>`});h+=`</div>`}ct.innerHTML=h}
+function renderSyncBar(){const bar=document.getElementById('syncBar');if(!bar)return;let h='';if(cfg.apiBase){h+=`<button class="sync-btn push" onclick="kvPush()" title="推送到 KV 云端">☁️ 推送</button>`;h+=`<button class="sync-btn pull" onclick="kvPull()" title="从 KV 云端拉取">⬇️ 拉取</button>`}if(cfg.wdavUrl){h+=`<button class="sync-btn push" onclick="wdavSync()" title="备份到 WebDAV">📦 备份</button>`;h+=`<button class="sync-btn pull" onclick="wdavPull()" title="从 WebDAV 拉取">⬇️ W拉取</button>`}if(!h)h=''/* 无同步源时不显示 */;bar.innerHTML=h}
+
+function render(){const ct=document.getElementById('content');const search=document.getElementById('searchInput').value.toLowerCase();if(curView==='gen')return renderGen(ct);if(curView==='trash')return renderTrash(ct);let list=entries.filter(e=>!e.deleted);if(curView!=='all')list=list.filter(e=>e.category===curView);if(search)list=list.filter(e=>(e.name||'').toLowerCase().includes(search)||(e.username||'').toLowerCase().includes(search)||(e.url||'').toLowerCase().includes(search)||(e.tags||[]).some(t=>t.toLowerCase().includes(search)));list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));const cat=CATS.find(c=>c.id===curView)||CATS[0];const isSel=selectMode;let h=`<div class="ct-head"><h2>${cat.icon} ${cat.name}</h2><span class="meta">${list.length} 条</span></div>`;if(!list.length){h+=`<div class="empty"><div class="icon">📭</div><h3>暂无记录</h3><p>点击"添加"开始使用</p></div>`}else{h+=`<div class="el${isSel?' select-mode':''}"  >`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];const checked=selectedIds.has(e.id);h+=`<div class="ec" onclick="${isSel?`toggleCheck('${e.id}')`: `showDetail('${e.id}')`}"  ><div class="ec-check${checked?' checked':''}"  >${checked?'✓':''}</div><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">${esc(e.username||e.url||'')}</div></div>${isSel?'':`<div class="ec-acts"><button onclick="event.stopPropagation();copy('${escA(e.password)}')" title="复制密码">📋</button><button onclick="event.stopPropagation();showEdit('${e.id}')" title="编辑">✏️</button></div>`}</div>`});h+=`</div>`}ct.innerHTML=h}
 function renderTrash(ct){const list=entries.filter(e=>e.deleted).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));let h=`<div class="ct-head"><h2>🗑️ 回收站</h2>${list.length?`<button class="btn btn-d btn-sm" onclick="emptyTrash()">清空</button>`:''}</div>`;if(!list.length){h+=`<div class="empty"><div class="icon">🗑️</div><h3>回收站为空</h3></div>`}else{h+=`<div class="el">`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];h+=`<div class="ec"><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">删除于 ${new Date(e.deletedAt).toLocaleString()}</div></div><div class="ec-acts"><button onclick="restoreEntry('${e.id}').then(()=>{render();renderSB()})" title="恢复">♻️</button><button onclick="confirmHardDel('${e.id}')" title="彻底删除">❌</button></div></div>`});h+=`</div>`}ct.innerHTML=h}
 function renderGen(ct){ct.innerHTML=`<div class="ct-head"><h2>🎲 密码生成器</h2></div><div class="gen"><div class="gen-out"><input id="genOut" readonly><button class="btn btn-p btn-sm" onclick="doGen()">生成</button><button class="btn btn-g btn-sm" onclick="copy(document.getElementById('genOut').value)">📋</button></div><div class="gen-opts"><label>长度: <strong id="genLenV">20</strong><input type="range" id="genLen" min="4" max="64" value="20" oninput="document.getElementById('genLenV').textContent=this.value"></label><label><input type="checkbox" id="genU" checked> 大写 A-Z</label><label><input type="checkbox" id="genL" checked> 小写 a-z</label><label><input type="checkbox" id="genD" checked> 数字 0-9</label><label><input type="checkbox" id="genS" checked> 符号 !@#$...</label></div><div style="margin-top:14px"><div class="fl">密码强度</div><div class="str"><div class="fill" id="genStr" style="width:0"></div></div><div style="font-size:12px;color:var(--tx3);margin-top:3px" id="genStrL"></div></div></div><div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--radius);padding:20px;margin-top:16px;max-width:520px"><h4 style="margin-bottom:10px">💡 安全建议</h4><ul style="padding-left:20px;font-size:13.5px;color:var(--tx2);line-height:2"><li>密码长度建议 16 位以上</li><li>混合大小写、数字和符号</li><li>不同网站使用不同密码</li><li>启用两步验证（TOTP）</li><li>定期通过 KV + WebDAV 同步备份</li></ul></div>`;doGen()}
 function doGen(){const pw=genPwd(+document.getElementById('genLen').value,{upper:document.getElementById('genU').checked,lower:document.getElementById('genL').checked,digits:document.getElementById('genD').checked,symbols:document.getElementById('genS').checked});document.getElementById('genOut').value=pw;const s=strength(pw);document.getElementById('genStr').style.width=(s.s/8*100)+'%';document.getElementById('genStr').style.background=s.c;document.getElementById('genStrL').textContent=s.l}
 function filterEntries(){render()}
+
+/* ===== Multi-select ===== */
+function toggleSelectMode(){
+  selectMode=!selectMode;selectedIds.clear();
+  document.getElementById('batchBar').classList.toggle('show',selectMode);
+  document.getElementById('manageBtn').textContent=selectMode?'取消':'管理';
+  document.getElementById('manageBtn').classList.toggle('btn-p',selectMode);
+  document.getElementById('manageBtn').classList.toggle('btn-g',!selectMode);
+  render();
+}
+function toggleCheck(id){
+  if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);
+  render();updateBatchCount();
+}
+function selectAllEntries(){
+  const list=entries.filter(e=>!e.deleted);if(curView!=='all')list.filter(e=>e.category===curView);
+  list.forEach(e=>selectedIds.add(e.id));render();updateBatchCount();
+}
+function deselectAll(){selectedIds.clear();render();updateBatchCount()}
+function updateBatchCount(){const el=document.getElementById('batchCount');if(el)el.textContent=selectedIds.size}
+async function batchDelete(){
+  if(!requireOnline())return;
+  if(selectedIds.size===0)return toast('请先选择条目','err');
+  const count=selectedIds.size;
+  if(!confirm(`确定删除选中的 ${count} 条记录？将移至回收站`))return;
+  for(const id of selectedIds){await softDel(id)}
+  toast(`已将 ${count} 条移至回收站`,'ok');
+  selectedIds.clear();updateBatchCount();
+  if(selectMode)toggleSelectMode();
+  render();renderSB();
+}
 
 /* ===== Detail ===== */
 function showDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];let h=`<div class="dv"><div class="dv-head"><div class="dv-icon ${ci.cls}">${ci.icon}</div><div style="flex:1;min-width:0"><div class="dv-title">${esc(e.name||'未命名')}</div>${e.url?`<div class="dv-url">${esc(e.url)}</div>`:''}</div><div class="dv-acts"><button class="btn btn-g btn-sm" onclick="showEdit('${id}')">✏️ 编辑</button><button class="btn btn-g btn-sm" onclick="confirmDel('${id}')">🗑️ 删除</button></div></div><div class="dv-sec"><h4>登录信息</h4>${e.username?`<div class="dv-row"><span class="lb">用户名</span><span class="vl">${esc(e.username)}</span><button class="cp" onclick="copy('${escA(e.username)}')">📋</button></div>`:''}<div class="dv-row"><span class="lb">密码</span><span class="vl mono" id="pd_${id}">••••••••••</span><button class="cp" onclick="copy('${escA(e.password)}')">📋</button><button class="cp" onclick="togglePwd('${id}','${escA(e.password)}')">👁️</button></div>${e.totpSecret?`<div class="dv-row"><span class="lb">TOTP</span><span class="vl"><span class="totp-code" id="totp_${id}">------</span></span><button class="cp" onclick="copy(document.getElementById('totp_${id}').textContent)">📋</button></div>`:''}</div>`;if(e.customFields?.length){h+=`<div class="dv-sec"><h4>自定义字段</h4>`;e.customFields.forEach(f=>{h+=`<div class="dv-row"><span class="lb">${esc(f.name)}</span><span class="vl${f.secret?' mono':''}">${f.secret?'••••••••':esc(f.value)}</span>${f.secret?`<button class="cp" onclick="copy('${escA(f.value)}')">📋</button>`:''}</div>`});h+=`</div>`}if(e.tags?.length){h+=`<div class="dv-sec"><h4>标签</h4><div class="tags">`;e.tags.forEach(t=>{h+=`<span class="tag">${esc(t)}</span>`});h+=`</div></div>`}if(e.notes){h+=`<div class="dv-sec"><h4>备注</h4><div style="padding:12px;background:var(--bg);border-radius:var(--rs);font-size:14px;white-space:pre-wrap;border:1px solid var(--bd)">${esc(e.notes)}</div></div>`}if(e.passwordHistory?.length){h+=`<div class="dv-sec"><h4>密码历史</h4>`;e.passwordHistory.slice().reverse().forEach(ph=>{h+=`<div class="dv-row"><span class="lb">${new Date(ph.changedAt).toLocaleDateString()}</span><span class="vl mono">••••••••</span><button class="cp" onclick="copy('${escA(ph.password)}')">📋</button></div>`});h+=`</div>`}h+=`<div style="font-size:11.5px;color:var(--tx3);margin-top:16px">创建: ${new Date(e.createdAt).toLocaleString()} | 更新: ${new Date(e.updatedAt).toLocaleString()}</div></div>`;document.getElementById('content').innerHTML=h;if(e.totpSecret)startTOTP(e.totpSecret,id);else clearInterval(totpInterval)}
@@ -806,11 +868,10 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
   </div>
 </div>
 
-<div class="stg-sec"><h3>🔄 同步与备份</h3><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn btn-p btn-sm" onclick="fullSync()">🔄 全量拉取</button><span style="font-size:12px;color:var(--tx3)">从 KV 和 WebDAV 拉取最新数据合并到本地</span></div></div>
 <div class="stg-sec"><h3>📥 导入 / 📤 导出</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-g btn-sm" onclick="doExportJSON()">📄 导出 JSON</button><button class="btn btn-g btn-sm" onclick="doExportEnc()">🔒 加密导出</button></div><div class="ie-area" onclick="document.getElementById('impF').click()"><p>📂 点击导入文件</p><p style="font-size:12px;color:var(--tx3);margin-top:4px">KeyVault JSON / Bitwarden JSON / CSV</p></div><input type="file" id="impF" style="display:none" accept=".json,.csv" onchange="doImport(this.files[0]);this.value=''"></div>
 <div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> — 三端同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，遗忘无法恢复</p></div></div>
 `;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
-function saveAllSettings(){cfg.apiBase=(document.getElementById('apiBase')?.value.trim()||cfg.apiBase).replace(/\/+$/,'');cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
+function saveAllSettings(){cfg.apiBase=(document.getElementById('apiBase')?.value.trim()||cfg.apiBase).replace(/\/+$/,'');cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();renderSyncBar();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
   await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'
 }catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
