@@ -398,11 +398,11 @@ async function kvPull(){
 async function wdavReq(method,path,body=null,rawBody=false){
   if(!cfg.apiBase){toast('请先配置 API 地址以启用 WebDAV 代理','err');throw new Error('未配置 API 地址')}
   const url=cfg.apiBase+'/api/webdav-proxy?url='+encodeURIComponent(cfg.wdavUrl.replace(/\/$/,'')+path);
-  const h={};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
+  const h={'X-WebDAV-Method':method};if(body)h['Content-Type']=rawBody?'application/octet-stream':'application/json';
   if(method==='PROPFIND')h['Depth']='0';
   if(cfg.wdavUser)h['Authorization']='Basic '+toB64(new TextEncoder().encode(cfg.wdavUser+':'+cfg.wdavPass));
   if(apiToken&&cfg.apiBase)h['X-Api-Token']=apiToken;
-  const opts={method,headers:h,mode:'cors'};
+  const opts={method:'POST',headers:h,mode:'cors'};
   if(body)opts.body=rawBody?body:JSON.stringify(body);
   const res=await fetch(url,opts);if(!res.ok&&!(method==='PROPFIND'&&res.status===207))throw new Error(`WebDAV ${method}: ${res.status}`);return res;
 }
