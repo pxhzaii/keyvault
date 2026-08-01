@@ -416,19 +416,30 @@ async function wdavReq(method,path,body=null,rawBody=false){
   const res=await fetch(proxyUrl,opts);if(!res.ok)throw new Error(`WebDAV ${method}: ${res.status}`);return res;
 }
 async function wdavTest(){
-  // 用 GET 请求 vault.enc 文件来测试连接（不用 PROPFIND/MKCOL，避免 Cloudflare 520）
   try{
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
     await wdavReq('GET',p);
-    return true; // 文件存在，连接成功
+    return true;
   }catch(e){
-    // 文件不存在时尝试 PUT 创建（坚果云会自动创建父目录）
+    // 文件不存在，尝试 PUT 创建
     try{
       const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
       const testData=await enc({entries:[],version:0,exportedAt:Date.now()},mk);
       await wdavReq('PUT',p,testData,true);
       return true;
-    }catch(e2){throw e2}
+    }catch(e2){
+      // 409 = 目录不存在，先创建目录再重试
+      if(e2.message.includes('409')){
+        try{
+          await wdavReq('MKCOL',cfg.wdavPath||'/KeyVault/');
+          const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
+          const testData=await enc({entries:[],version:0,exportedAt:Date.now()},mk);
+          await wdavReq('PUT',p,testData,true);
+          return true;
+        }catch(e3){throw e3}
+      }
+      throw e2;
+    }
   }
 }
 async function wdavSync(){
@@ -688,7 +699,11 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 <div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> — 三端同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，遗忘无法恢复</p></div></div>
 `;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
 function saveAllSettings(){cfg.apiBase=document.getElementById('apiBase')?.value.trim()||cfg.apiBase;cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();initKvToken()}
-async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'}catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
+async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
+  // 先测代理本身是否可达
+  if(cfg.wdavProxy){try{const pr=await fetch(cfg.wdavProxy.replace(/\/$/,'').replace(/\/api\/webdav$/,'')+'/api/webdav',{method:'GET',mode:'cors'});if(!pr.ok)throw new Error('status '+pr.status)}catch(pe){s.innerHTML=`<div class="wdav-status err">❌ 代理不可达: ${esc(pe.message)}。请确认代理地址正确且网络可访问</div>`;return}}
+  await wdavTest();s.innerHTML='<div class="wdav-status ok">✅ 连接成功</div>'
+}catch(e){s.innerHTML=`<div class="wdav-status err">❌ ${esc(e.message)}</div>`}}
 
 /* ===== Modal ===== */
 function openMo(){document.getElementById('mo').classList.add('show')}
