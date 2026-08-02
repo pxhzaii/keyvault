@@ -878,7 +878,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
       <div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div>
       <div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div>
       <div class="fg"><label class="fl">同步路径</label><input class="fi" id="wPath" value="${escA(cfg.wdavPath||'/KeyVault/')}" placeholder="/KeyVault/"></div>
-      <div class="fg"><label class="fl">代理地址（可选）</label><input class="fi" id="wdavProxy" value="${escA(cfg.wdavProxy||'')}" placeholder="https://your-proxy.vercel.app/api/webdav"></div>
+      <div class="fg"><label class="fl">代理地址（可选）</label><input class="fi" id="wdavProxy" value="${escA(cfg.wdavProxy||'')}" placeholder="https://webdav.5as.cn/api/webdav"></div>
       <div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">坚果云等 CF 站点需要部署 Vercel 代理服务</div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="wdavSync()">&#x2B06; 备份</button><button class="btn btn-g btn-sm" onclick="wdavPull()">&#x2B07; 读取</button><button class="btn btn-g btn-sm" onclick="testWdav()">测试</button></div>
       <div id="wStatus"></div>
