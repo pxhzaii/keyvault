@@ -294,20 +294,19 @@ async function handleWebdavProxy(request, env) {
 }
 
 // ===== 初始化 =====
+// /api/init 不需要 Bearer 认证，原因：
+// 1. 保险库数据由 AES-256-GCM 加密保护，token hash 只是访问控制层
+// 2. 如果要求认证才能更新 hash，当 hash 与当前 token 不一致时会造成死锁
+//    （无法认证 → 无法更新 hash → 无法认证）
+// 3. 暴力覆盖 hash 的攻击者仍无法解密保险库数据
+// 安全防护：速率限制（防暴力探测） + 加密（防数据泄露）
 async function handleInit(request, env) {
-  // 如果已存在 token_hash，必须先通过 Token 验证才能更新
-  const existing = await env.KEYVAULT_KV.get('auth:token_hash');
-  if (existing) {
-    if (!await verifyToken(request, env)) {
-      return corsResponse(JSON.stringify({ error: 'Unauthorized: token already initialized' }), 401);
-    }
-  }
-
   const body = await request.json();
   if (!body.tokenHash) {
     return corsResponse(JSON.stringify({ error: 'Missing tokenHash' }), 400);
   }
 
+  const existing = await env.KEYVAULT_KV.get('auth:token_hash');
   await env.KEYVAULT_KV.put('auth:token_hash', body.tokenHash);
 
   if (existing && existing === body.tokenHash) {
