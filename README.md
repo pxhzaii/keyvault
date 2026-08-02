@@ -1,161 +1,218 @@
-## 部署步骤
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: '8f8ef377-a2b5-4cf7-8fdf-91927975b742'
+  PropagateID: '8f8ef377-a2b5-4cf7-8fdf-91927975b742'
+  ReservedCode1: 'ea34cb08-2bcb-4e29-8576-920881b3256f'
+  ReservedCode2: 'ea34cb08-2bcb-4e29-8576-920881b3256f'
+---
 
-### 第 1 步：创建 KV 命名空间
+# KeyVault — 多源同步密码管理器
+
+AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
+
+## 功能特性
+
+- **AES-256-GCM 加密**：PBKDF2 60万次迭代，确定性派生盐
+- **三端同步**：KV 云端（主存储）+ WebDAV（坚果云等异地备份）+ IndexedDB（本地缓存）
+- **TOTP 两步验证**：支持 TOTP 动态验证码
+- **密码生成器**：可配置长度和字符集
+- **访问密码**：通过环境变量 `GATE_PASSWORD` 控制，前端零接触密码
+- **暴力破解防护**：指数退避锁定
+- **离线模式**：断网时自动切换，禁止写操作
+
+## 项目结构
+
+```
+KeyVault/
+├── public/
+│   └── index.html                    # 前端主应用
+├── functions/
+│   └── api/
+│       └── [[route]].js              # Cloudflare Pages Function 后端
+├── edge-functions/
+│   └── api/
+│       └── [[route]].js              # 腾讯云 EdgeOne Makers Edge Function 后端
+├── keyvault-webdav-proxy/
+│   ├── webdav.js                     # Vercel WebDAV 代理
+│   └── package.json
+├── wrangler.toml                     # Cloudflare 配置
+├── _routes.json                      # CF 路由配置
+└── package.json
+```
+
+---
+
+## 部署方案一：Cloudflare Pages（推荐）
+
+前端和后端 API 同域部署，天然无 CORS 问题。
+
+### 第一步：创建 KV Namespace
 
 1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 Workers & Pages → KV
-3. 点击「创建命名空间」，名称填 `KEYVAULT_KV`
-4. 记下生成的 Namespace ID
+2. 左侧菜单 → **Workers & Pages** → **KV**
+3. 点击 **Create a namespace**，名称填 `keyvault-kv`
+4. 创建后记录 **Namespace ID**
 
-### 第 2 步：创建 Pages 项目
+### 第二步：创建 Pages 项目
 
-#### 方式 A：GitHub 仓库（推荐）
+1. 左侧菜单 → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+2. 选择你的 GitHub 仓库
+3. 构建设置：
+   - **Framework preset**：`None`
+   - **Build command**：留空
+   - **Build output directory**：`public`
+4. 点击 **Save and Deploy**
 
-1. Fork 仓库
-2. 登录 Cloudflare Dashboard → Workers & Pages → 创建
-3. 选择「连接到 Git」→ 选你的仓库
-4. 构建设置：
-   - 构建命令：留空
-   - 构建输出目录：`public`
-5. 部署
+### 第三步：绑定 KV Namespace
 
-### 第 3 步：绑定 KV
+1. 进入项目 → **Settings** → **Functions**
+2. **KV namespace bindings** → **Add binding**
+   - **Variable name**：`KEYVAULT_KV`（必须一致）
+   - **KV namespace**：选择第一步创建的 namespace
+3. 点击 **Save**
+4. 修改绑定后需**重新部署**才生效：Deployments 页面 → **Retry deployment**
 
-1. 在 Cloudflare Dashboard → 你的 Pages 项目 → Settings → Bindings
-2. 添加绑定：
-   - 变量名：`KEYVAULT_KV`
-   - 类型：KV 命名空间
-   - 选择第 1 步创建的命名空间
-3. 重新部署项目
+### 第四步：配置环境变量（可选）
 
-### 第 4 步：使用
+项目 **Settings** → **Environment variables**：
 
-1. 打开你的 Pages 网址（如 `https://keyvault.pages.dev`）
-2. 设置主密码创建保险库
-3. 在设置中填入 API 地址（就是你的 Pages 网址）
-4. 在设置中配置 WebDAV 备份
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `GATE_PASSWORD` | 访问密码（不设置则关闭门禁） | `mySecret123` |
+| `WEBDAV_ALLOWED_DOMAINS` | WebDAV 域名白名单，逗号分隔 | `dav.jianguoyun.com,nextcloud.example.com` |
 
-## 配置文件说明
+### 第五步：验证
 
-### wrangler.toml
+1. 打开 Pages 分配的域名
+2. 创建主密码 → 添加条目 → 测试推送/恢复
 
-```toml
-name = "keyvault"
-pages_build_output_dir = "./public"
-compatibility_date = "2026-08-01"
+### 自定义域名（可选）
 
-[[kv_namespaces]]
-binding = "KEYVAULT_KV"
-id = "你的 KV Namespace ID"
-```
+项目 **Settings** → **Custom domains** → **Add**，按提示添加 CNAME 记录。
 
-### _routes.json
+---
 
-```json
-{
-  "version": 1,
-  "include": ["/api/*"],
-  "exclude": []
-}
-```
+## 部署方案二：腾讯云 EdgeOne Makers
 
-这确保只有 `/api/*` 路径触发 Function，其他路径直接返回静态文件。
+腾讯云 EdgeOne Makers 提供 Edge Function + KV 存储，与 Cloudflare Workers API 高度兼容，可实现同域部署。
 
-### package.json
+### 第一步：开通 KV 存储
 
-```json
-{
-  "name": "keyvault",
-  "version": "1.0.0",
-  "private": true
-}
-```
+1. 登录 [EdgeOne 控制台](https://console.cloud.tencent.com/edgeone)
+2. 顶部导航栏点击 **KV 存储** → **立即申请**
+3. 填写申请信息，开通 KV 存储服务
 
-## 三端同步策略
+### 第二步：创建 Makers 项目
 
-| 存储 | 角色 | 写入时机 | 读取时机 |
-|------|------|---------|---------|
-| **IndexedDB** | 主工作区（本地缓存） | 每次操作实时写入 | 每次打开应用 |
-| **KV 云端** | 云端主存储 | 保存操作后自动推送 | 打开应用时自动拉取 |
-| **WebDAV** | 异地备份 | 保存操作后自动备份 | 手动拉取恢复 |
+1. 左侧菜单 → **Makers** → **创建项目**
+2. 选择 **Git 仓库** → 授权并选择你的 GitHub 仓库
+3. 构建设置：
+   - **构建命令**：留空
+   - **输出目录**：`public`
+4. 点击 **部署**
 
-### 同步流程
+### 第三步：关联 KV 存储
 
-1. **打开应用** → 从 IndexedDB 读取 → 从 KV 拉取最新 → LWW 合并
-2. **保存操作** → 写 IndexedDB → 推送 KV → 备份 WebDAV
-3. **手动全量同步** → 同时从 KV + WebDAV 拉取 → LWW 合并 → 推送所有源
+1. 进入项目 → **设置** → **KV 存储**
+2. 点击 **关联 KV 空间**，选择第一步开通的 KV 存储
+3. **绑定变量名**：`KEYVAULT_KV`（必须与代码一致）
 
-### 冲突解决：LWW + Version
+### 第四步：配置环境变量（可选）
 
-- 每个 vault 有单调递增的 `version` 号
-- 拉取时比较 version，取更高版本
-- version 相同时按 `updatedAt` 时间戳判断
-- 每次写入前保存快照到 KV（保留最近 5 个）
+项目 **设置** → **环境变量**：
 
-## 免费额度评估
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `GATE_PASSWORD` | 访问密码（不设置则关闭门禁） | `mySecret123` |
+| `WEBDAV_ALLOWED_DOMAINS` | WebDAV 域名白名单，逗号分隔 | `dav.jianguoyun.com,nextcloud.example.com` |
 
-| 服务 | 免费额度 | 密码管理器用量 | 余量 |
-|------|---------|--------------|------|
-| Pages 静态托管 | 无限 | ~100 次/天 | 充足 |
-| Pages Functions | 10 万次/天 | ~10 次/天 | 充足 |
-| KV 读取 | 10 万次/天 | ~5 次/天 | 充足 |
-| KV 写入(同键) | 1 次/秒 | ~2 次/天 | 充足 |
-| KV 存储 | 1 GB | ~100 KB | 充足 |
+### 第五步：验证
 
-**结论：个人使用完全免费，额度消耗 < 0.01%。**
+1. 打开 Makers 分配的域名
+2. 创建主密码 → 添加条目 → 测试推送/恢复
 
-## 坚果云 WebDAV 配置
+### 自定义域名（可选）
 
-1. 登录坚果云 → 右上角头像 → 安全选项 → 第三方应用管理
-2. 添加应用密码，名称填 "KeyVault"
-3. 在 KeyVault 设置 → WebDAV 填写：
-   - 服务器：`https://dav.jianguoyun.com/dav/`
-   - 用户名：坚果云邮箱
-   - 密码：上一步生成的**应用专用密码**
-   - 路径：`/KeyVault/`
+项目 **设置** → **域名管理** → **添加域名**，按提示添加 CNAME 记录。
 
-**无需单独配置 CORS 代理！** WebDAV 请求走同域的 `/api/webdav-proxy`。
+---
+
+## WebDAV 代理部署（坚果云等场景）
+
+### 为什么需要代理？
+
+坚果云（`dav.jianguoyun.com`）使用 Cloudflare CDN，从 CF Pages 或 EdgeOne 直接请求会遇到 520 错误。需要通过非 CF 网络的代理转发请求。
+
+### Vercel 部署步骤
+
+1. 将 `keyvault-webdav-proxy/` 目录推到独立的 GitHub 仓库
+   ```
+   keyvault-webdav-proxy/
+   ├── api/
+   │   └── webdav.js      # 从 webdav.js 移动到 api/ 目录下
+   └── package.json
+   ```
+   > Vercel 要求 Serverless Function 放在 `api/` 目录下，访问路径自动变为 `/api/webdav`
+
+2. 登录 [Vercel](https://vercel.com/) → **Add New** → **Project** → 导入该仓库
+3. 直接点击 **Deploy**
+4. 记录域名，如 `https://keyvault-webdav-proxy.vercel.app`
+
+### 在 KeyVault 中配置
+
+1. 打开 KeyVault → 设置 → WebDAV 备份
+2. 服务器类型选 **坚果云**（自动填充地址和代理）
+3. 代理地址填 Vercel 域名：`https://你的项目.vercel.app/api/webdav`
+4. 填写坚果云用户名和**应用专用密码**（不是登录密码）
+5. 点击 **测试** 验证连接
+
+### 自建 WebDAV 白名单
+
+| 修改位置 | 方法 |
+|----------|------|
+| CF Pages 环境变量 | 设置 `WEBDAV_ALLOWED_DOMAINS` |
+| EdgeOne Makers 环境变量 | 设置 `WEBDAV_ALLOWED_DOMAINS` |
+| Vercel 代理 | 修改 `api/webdav.js` 中的 `ALLOWED_DOMAINS` |
+| 后端源码 | 修改 `[[route]].js` 中的 `DEFAULT_ALLOWED_DOMAINS` |
+
+---
+
+## 两种部署方案对比
+
+|  | Cloudflare Pages | 腾讯云 EdgeOne Makers |
+|---|---|---|
+| 前后端同域 | 是（无 CORS） | 是（无 CORS） |
+| 后端存储 | Workers KV | Makers KV |
+| Edge Function | Pages Function | Edge Function（API 兼容） |
+| 国内访问 | 需自定义域名+CDN | 原生国内节点，延迟更低 |
+| 免费额度 | KV 10万次读/天，1000次写/天 | KV 1GB 存储，免费版有请求限制 |
+| 自定义域名 | Cloudflare 管理 | 腾讯云管理 |
+| 推荐场景 | 全球用户 | 国内用户优先 |
+
+---
 
 ## 安全说明
 
-| 项目 | 说明 |
-|------|------|
-| 加密 | AES-256-GCM，PBKDF2 60万次迭代 |
-| 认证 | 主密码派生 API Token，服务端只存哈希 |
-| 存储 | KV 存的是加密密文，服务端无法解密 |
-| 零知识 | 前端加密、后端只转发密文 |
-| Token | 不持久化，每次从主密码实时派生 |
-| 设备盐 | 每台设备独立随机盐存 IndexedDB，防彩虹表 |
-| WebDAV 代理 | 域名白名单 + 每IP速率限制（60次/分钟） |
-| 离线模式 | 断网自动锁定为只读，顶部显示状态栏 |
-| 备份提醒 | 首次解锁有数据时弹窗提醒配置同步 |
+- 主密码不存储，丢失无法恢复
+- Token 以 SHA-256 哈希存储于 KV，服务端无法反推主密码
+- AES-256-GCM 加密所有存储数据
+- WebDAV 代理限制目标域名白名单 + 速率限制
+- 访问密码由环境变量控制，前端零接触
+- 密码字段通过 `_pwMap` 机制避免明文写入 DOM
+- 暴力破解防护：指数退避锁定
 
-## 设备随机盐说明
+## 技术栈
 
-- **为什么需要设备盐？** 原来所有用户共享硬编码盐值，攻击者可以用通用彩虹表批量破解。改为每台设备独立生成 32 字节随机盐后，每台设备的盐都不同，彩虹表失效。
-- **盐存在哪？** 存在浏览器 IndexedDB 的 `config` store 中，key 为 `deviceSalt`。
-- **换设备怎么办？** 加密导出文件（`.enc`）会包含盐信息，导入时自动恢复。跨设备迁移步骤：
-  1. 在旧设备导出加密备份文件（设置 → 导出加密备份）
-  2. 在新设备打开 KeyVault，输入**相同主密码**创建保险库
-  3. 导入加密备份文件
-  4. 注意：新设备的盐与旧设备不同，导入后旧设备的加密备份将无法在新设备解密，需重新导出
+- 前端：原生 HTML/CSS/JS，无框架依赖
+- 后端：Cloudflare Pages Functions / 腾讯云 EdgeOne Edge Functions
+- 存储：Cloudflare KV / Makers KV + IndexedDB
+- 加密：Web Crypto API (PBKDF2 + AES-256-GCM)
 
-## WebDAV 代理白名单
+## License
 
-`/api/webdav-proxy` 只允许代理白名单中的域名，防止被滥用扫描内网/公网。默认白名单：
-
-| 域名 | 服务 |
-|------|------|
-| `dav.jianguoyun.com` | 坚果云 |
-| `webdav.pcloud.com` | pCloud |
-| `webdav.hidrive.strato.com` | HiDrive |
-| `dav.infini-cloud.net` | InfiniCLOUD |
-| `nextcloud` | Nextcloud（含子域名匹配） |
-| `cloudflare` | Cloudflare WebDAV |
-| `alist` | Alist |
-
-**如需添加自定义 WebDAV 服务器**，修改 `worker.js` 中的 `ALLOWED_WEBDAV_DOMAINS` 数组，添加你的域名即可。
-
-代理还强制 HTTPS，拒绝明文 HTTP 请求（防止 WebDAV 密码被截获），并对每 IP 限制 60 次/分钟请求。
+MIT
 
 > AI生成
