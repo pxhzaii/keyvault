@@ -308,9 +308,6 @@ async function gateCheckEnabled(){
     return!!(d.enabled);
   }catch(e){return false}
 }
-function keepGate(){try{sessionStorage.setItem('kv_gate','1')}catch(e){}}
-function clearGate(){try{sessionStorage.removeItem('kv_gate')}catch(e){}}
-function getGateKept(){try{return sessionStorage.getItem('kv_gate')==='1'}catch(e){return false}}
 async function handleGate(){
   const input=document.getElementById('gatePwdInput').value;
   if(!input){document.getElementById('gateErr').textContent='请输入访问密码';return}
@@ -320,7 +317,6 @@ async function handleGate(){
     const d=await r.json();
     if(d.ok){
       gatePassed=true;
-      keepGate();
       const gs=document.getElementById('gateScreen');gs.classList.add('hiding');
       setTimeout(()=>{gs.style.display='none'},400);
     }else{
@@ -401,14 +397,12 @@ async function initKvToken(){
 /* ===== KV Cloud Sync ===== */
 async function kvPush(){
   if(!requireOnline())return;
-  if(!cfg.apiBase)return toast('请配置 API 地址（设置 → 云端同步）','err');
-  if(!apiToken)return toast('请先解锁保险库以生成 API Token','err');
+  if(!cfg.apiBase||!apiToken)return toast('请配置云端同步','err');
   toast('推送到 KV...','info');
   try{
     let remoteVersion=vaultVersion;
     try{
       const head=await fetch(cfg.apiBase+'/api/vault',{method:'GET',headers:{'Authorization':'Bearer '+apiToken}});
-      if(head.status===401){await initKvToken();toast('Token 已重新初始化，正在重试...','info');return kvPush()}
       if(head.ok){const hj=await head.json();if(hj.version>remoteVersion)remoteVersion=hj.version}
     }catch(e){}
     vaultVersion=Math.max(vaultVersion,remoteVersion)+1;
@@ -416,22 +410,19 @@ async function kvPush(){
     const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
     let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
-    if(res.status===401)throw new Error('认证失败（401），请检查密码是否与云端一致，或重新初始化');
-    if(!res.ok){const errText=await res.text().catch(()=>'');throw new Error(`HTTP ${res.status}: ${errText||'未知错误'}`)}
+    if(!res.ok)throw new Error(await res.text());
     toast('KV 推送成功','ok');updateSyncStatusUI();await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
   }catch(e){toast('KV 推送失败: '+e.message,'err');updateSyncStatusUI()}
 }
 async function kvPull(){
   if(!requireOnline())return;
-  if(!cfg.apiBase)return toast('请配置 API 地址（设置 → 云端同步）','err');
-  if(!apiToken)return toast('请先解锁保险库以生成 API Token','err');
+  if(!cfg.apiBase||!apiToken)return toast('请配置云端同步','err');
   toast('从 KV 读取...','info');
   try{
     let res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}});
-    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken})}
-    if(res.status===401)throw new Error('认证失败（401），请检查密码是否与云端一致，或重新初始化');
+    if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}})}
     if(res.status===404){toast('云端暂无数据','info');return}
-    if(!res.ok){const errText=await res.text().catch(()=>'');throw new Error(`HTTP ${res.status}: ${errText||'未知错误'}`)}
+    if(!res.ok)throw new Error(await res.text());
     const {data,version}=await res.json();
     let remote;
     try{
@@ -723,7 +714,7 @@ async function handleUnlock(){
     loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd);renderSyncPanel()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
-function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];_pwMap.clear();_pwIdx=0;failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();clearGate();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;';/* Re-check gate on lock */const gateScreen=document.getElementById('gateScreen');if(gateScreen)gateScreen.style.display='none'}
+function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];_pwMap.clear();_pwIdx=0;failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
@@ -920,7 +911,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function escA(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\r/g,'').replace(/\n/g,'\\n')}
 
 /* ===== Init ===== */
-(async function(){await openDB();loadCfg();let gateRequired=false;if(cfg.apiBase){try{gateRequired=await gateCheckEnabled()}catch(e){}}if(gateRequired&&!gatePassed&&!getGateKept()){document.getElementById('gateScreen').style.display='flex';document.getElementById('gatePwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleGate()})}else{document.getElementById('gateScreen').style.display='none';if(gateRequired&&!gatePassed&&getGateKept())gatePassed=true}const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
+(async function(){await openDB();loadCfg();let gateRequired=false;if(cfg.apiBase){try{gateRequired=await gateCheckEnabled()}catch(e){}}if(gateRequired&&!gatePassed){document.getElementById('gateScreen').style.display='flex';document.getElementById('gatePwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleGate()})}else{document.getElementById('gateScreen').style.display='none'}const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
 const savedPwd=cfg.keepUnlocked?getKeptPwd():null;if(savedPwd&&hash){document.getElementById('masterPwd').value=savedPwd;handleUnlock()}})();
 </script>
 </body>
