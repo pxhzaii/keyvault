@@ -290,7 +290,7 @@ let SALT=null;
 let isOffline=false;
 let failCount=0,lockUntil=0,lockdownTimer=null;
 let selectMode=false,selectedIds=new Set();
-let cfg={dark:false,autoLock:5,keepUnlocked:true,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'',wdavPath:'/KeyVault/',wdavProxy:''};
+let cfg={dark:false,autoLock:5,keepUnlocked:true,apiBase:'',apiTokenHash:'',wdavUrl:'',wdavUser:'',wdavPass:'ai434x5iuf47eba5',wdavPath:'/KeyVault/',wdavProxy:''};
 
 /* ===== Password Map (avoid exposing passwords in DOM) ===== */
 const _pwMap=new Map();let _pwIdx=0;
@@ -317,6 +317,8 @@ async function handleGate(){
     const d=await r.json();
     if(d.ok){
       gatePassed=true;
+      // 持久化解锁状态：用 sessionStorage 保存，关闭浏览器后自动失效
+      try{sessionStorage.setItem('kv_gate','1')}catch(e){}
       const gs=document.getElementById('gateScreen');gs.classList.add('hiding');
       setTimeout(()=>{gs.style.display='none'},400);
     }else{
@@ -881,7 +883,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
   <div class="acc-card" id="accWdav" onclick="toggleAccCard('accWdav')">
     <div class="acc-card-head"><span class="icon">&#x1F5C2;</span><div class="info"><div class="title">WebDAV 备份</div><div class="desc">本地备份 + 坚果云等</div></div><span class="arrow">&#x25BC;</span></div>
     <div class="acc-card-body" onclick="event.stopPropagation()">
-      <div class="fg"><label class="fl">服务器类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/';if(!document.getElementById('wdavProxy').value)document.getElementById('wdavProxy').value='https://your-proxy.vercel.app/api/webdav'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguoyun')?'selected':''}>坚果云</option></select></div>
+      <div class="fg"><label class="fl">服务器类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/';if(!document.getElementById('wPass').value)document.getElementById('wPass').value='ai434x5iuf47eba5';if(!document.getElementById('wdavProxy').value)document.getElementById('wdavProxy').value='https://your-proxy.vercel.app/api/webdav'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguoyun')?'selected':''}>坚果云</option></select></div>
       <div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div>
       <div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div>
       <div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div>
@@ -911,7 +913,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function escA(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\r/g,'').replace(/\n/g,'\\n')}
 
 /* ===== Init ===== */
-(async function(){await openDB();loadCfg();let gateRequired=false;if(cfg.apiBase){try{gateRequired=await gateCheckEnabled()}catch(e){}}if(gateRequired&&!gatePassed){document.getElementById('gateScreen').style.display='flex';document.getElementById('gatePwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleGate()})}else{document.getElementById('gateScreen').style.display='none'}const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
+(async function(){await openDB();loadCfg();let gateRequired=false;if(cfg.apiBase){try{gateRequired=await gateCheckEnabled()}catch(e){}}if(gateRequired&&!gatePassed&&!sessionStorage.getItem('kv_gate')){document.getElementById('gateScreen').style.display='flex';document.getElementById('gatePwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleGate()})}else{document.getElementById('gateScreen').style.display='none'}const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
 const savedPwd=cfg.keepUnlocked?getKeptPwd():null;if(savedPwd&&hash){document.getElementById('masterPwd').value=savedPwd;handleUnlock()}})();
 </script>
 </body>
