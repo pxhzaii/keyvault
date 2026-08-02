@@ -387,7 +387,9 @@ async function initKvToken(){
   if(!cfg.apiBase||!apiToken)return false;
   try{
     const th=await sha256(apiToken);
-    const res=await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th})});
+    const h={'Content-Type':'application/json'};
+    if(apiToken)h['Authorization']='Bearer '+apiToken;
+    const res=await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:h,body:JSON.stringify({tokenHash:th})});
     return res.ok;
   }catch(e){return false}
 }
@@ -631,7 +633,7 @@ async function handleSetup(){
     SALT=await deriveSalt(pwd);mk=await deriveKey(pwd);apiToken=await deriveApiToken(pwd);curPwd=pwd;
     const h=await sha256(pwd+Array.from(SALT).join(','));const th=await sha256(apiToken);
     await idbPut(CF,{k:'vaultHash',v:h});await idbPut(CF,{k:'created',v:Date.now()});await idbPut(CF,{k:'tokenHash',v:th});
-    if(cfg.apiBase){try{const th2=await sha256(apiToken);await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenHash:th2})})}catch(e){}}
+    if(cfg.apiBase){try{const th2=await sha256(apiToken);const initH={'Content-Type':'application/json'};if(apiToken)initH['Authorization']='Bearer '+apiToken;await fetch(cfg.apiBase+'/api/init',{method:'POST',headers:initH,body:JSON.stringify({tokenHash:th2})})}catch(e){}}
     failCount=0;lockUntil=0;
     await initKvToken();
     await loadEntries();const vData=await idbGet(CF,'vaultVersion');if(vData)vaultVersion=vData.v||0;
