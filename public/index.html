@@ -14,6 +14,8 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
 .dark ::-webkit-scrollbar-thumb{background:var(--bg4)}
 
+#gateScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:99999;transition:opacity .4s}
+#gateScreen.hiding{opacity:0;pointer-events:none}
 #lockScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999;transition:opacity .4s}
 #lockScreen.hiding{opacity:0;pointer-events:none}
 .lock-box{text-align:center;padding:48px 40px;background:var(--bg2);border-radius:20px;box-shadow:var(--shadow2);width:400px;max-width:92vw}
@@ -212,6 +214,17 @@ textarea.fi{resize:vertical;min-height:60px}
 </head>
 <body>
 
+<div id="gateScreen" style="display:none">
+  <div class="lock-box">
+    <div class="lock-icon">&#x1F6E1;</div>
+    <h1>KeyVault</h1>
+    <p class="sub">请输入访问密码</p>
+    <input class="lock-input" type="password" id="gatePwdInput" placeholder="访问密码" autocomplete="off" autofocus>
+    <button class="lock-btn" onclick="handleGate()">确认</button>
+    <div class="lock-err" id="gateErr">&nbsp;</div>
+  </div>
+</div>
+
 <div id="lockScreen">
   <div class="lock-box" id="welcomeBox" style="display:none">
     <div class="lock-icon">&#x1F512;</div>
@@ -284,6 +297,35 @@ const _pwMap=new Map();let _pwIdx=0;
 function setPw(val){const k='p'+(_pwIdx++);_pwMap.set(k,val);return k}
 function copyField(k){const v=_pwMap.get(k);if(v)copy(v)}
 function getPw(k){return _pwMap.get(k)||''}
+
+/* ===== Gate Password (via API, env var GATE_PASSWORD) ===== */
+let gatePassed=false;
+async function gateCheckEnabled(){
+  if(!cfg.apiBase)return false;
+  try{
+    const r=await fetch(cfg.apiBase+'/api/gate');
+    const d=await r.json();
+    return!!(d.enabled);
+  }catch(e){return false}
+}
+async function handleGate(){
+  const input=document.getElementById('gatePwdInput').value;
+  if(!input){document.getElementById('gateErr').textContent='请输入访问密码';return}
+  if(!cfg.apiBase){document.getElementById('gateErr').textContent='请先配置 API 地址';return}
+  try{
+    const r=await fetch(cfg.apiBase+'/api/gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:input})});
+    const d=await r.json();
+    if(d.ok){
+      gatePassed=true;
+      const gs=document.getElementById('gateScreen');gs.classList.add('hiding');
+      setTimeout(()=>{gs.style.display='none'},400);
+    }else{
+      document.getElementById('gateErr').textContent=d.error||'访问密码错误';
+    }
+  }catch(e){
+    document.getElementById('gateErr').textContent='验证失败: '+e.message;
+  }
+}
 
 /* ===== Derive Salt ===== */
 async function deriveSalt(pwd){
@@ -670,7 +712,7 @@ async function handleUnlock(){
     loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd);renderSyncPanel()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
-function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
+function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];_pwMap.clear();_pwIdx=0;failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
@@ -837,7 +879,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
   <div class="acc-card" id="accWdav" onclick="toggleAccCard('accWdav')">
     <div class="acc-card-head"><span class="icon">&#x1F5C2;</span><div class="info"><div class="title">WebDAV 备份</div><div class="desc">本地备份 + 坚果云等</div></div><span class="arrow">&#x25BC;</span></div>
     <div class="acc-card-body" onclick="event.stopPropagation()">
-      <div class="fg"><label class="fl">服务器类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/';if(!document.getElementById('wdavProxy').value)document.getElementById('wdavProxy').value='https://webdav.5as.cn/api/webdav'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguoyun')?'selected':''}>坚果云</option></select></div>
+      <div class="fg"><label class="fl">服务器类型</label><select class="fi" id="wType" onchange="if(this.value==='jianguoyun'){document.getElementById('wUrl').value='https://dav.jianguoyun.com/dav/';document.getElementById('wPath').value='/KeyVault/';if(!document.getElementById('wdavProxy').value)document.getElementById('wdavProxy').value='https://your-proxy.vercel.app/api/webdav'}"><option value="custom">自定义</option><option value="jianguoyun" ${cfg.wdavUrl?.includes('jianguoyun')?'selected':''}>坚果云</option></select></div>
       <div class="fg"><label class="fl">服务器地址</label><input class="fi" id="wUrl" value="${escA(cfg.wdavUrl)}" placeholder="https://dav.jianguoyun.com/dav/"></div>
       <div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div>
       <div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div>
@@ -867,8 +909,8 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function escA(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\r/g,'').replace(/\n/g,'\\n')}
 
 /* ===== Init ===== */
-(async function(){await openDB();const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
-loadCfg();const savedPwd=cfg.keepUnlocked?getKeptPwd():null;if(savedPwd&&hash){document.getElementById('masterPwd').value=savedPwd;handleUnlock()}})();
+(async function(){await openDB();loadCfg();let gateRequired=false;if(cfg.apiBase){try{gateRequired=await gateCheckEnabled()}catch(e){}}if(gateRequired&&!gatePassed){document.getElementById('gateScreen').style.display='flex';document.getElementById('gatePwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleGate()})}else{document.getElementById('gateScreen').style.display='none'}const hash=await idbGet(CF,'vaultHash');if(hash){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block'}else{document.getElementById('welcomeBox').style.display='block';document.getElementById('unlockBox').style.display='none'}document.getElementById('masterPwd').addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});document.getElementById('setupPwd').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('setupPwd2').focus()});document.getElementById('setupPwd2').addEventListener('keydown',e=>{if(e.key==='Enter')handleSetup()});if(window.matchMedia?.('(prefers-color-scheme:dark)').matches&&!localStorage.getItem('kv_cfg'))cfg.dark=true;document.getElementById('app').style.display='none';
+const savedPwd=cfg.keepUnlocked?getKeptPwd():null;if(savedPwd&&hash){document.getElementById('masterPwd').value=savedPwd;handleUnlock()}})();
 </script>
 </body>
 </html>
