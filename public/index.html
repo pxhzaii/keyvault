@@ -402,6 +402,19 @@ async function kvPush(){
   if(!cfg.apiBase||!apiToken)return toast('请配置云端同步','err');
   toast('推送到 KV...','info');
   try{
+    // 推送前校验：尝试读取云端数据并用当前主密码解密
+    // 如果解密失败说明主密码不一致，拒绝覆盖
+    try{
+      const head=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}});
+      if(head.ok){
+        const hj=await head.json();
+        if(hj.data){
+          try{await dec(hj.data,mk)}catch(e){
+            toast('推送失败：云端数据由其他主密码加密，当前密码无法解密。如需覆盖请先清除云端数据','err');return;
+          }
+        }
+      }
+    }catch(e){}
     let remoteVersion=vaultVersion;
     try{
       const head=await fetch(cfg.apiBase+'/api/vault',{method:'GET',headers:{'Authorization':'Bearer '+apiToken}});
@@ -513,6 +526,16 @@ async function wdavSync(){
   if(!cfg.wdavUrl)return toast('请配置 WebDAV','err');
   toast('备份到 WebDAV...','info');
   try{
+    // 备份前校验：尝试读取云端数据并用当前主密码解密
+    try{
+      const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
+      const {bodyText:testB64}=await wdavReq('GET',p);
+      if(testB64){
+        try{await dec(testB64,mk)}catch(e){
+          toast('备份失败：云端数据由其他主密码加密，当前密码无法解密。如需覆盖请先清除云端数据','err');return;
+        }
+      }
+    }catch(e){}
     let remoteVersion=vaultVersion;
     try{
       const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
@@ -878,7 +901,7 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
       <div class="fg"><label class="fl">用户名</label><input class="fi" id="wUser" value="${escA(cfg.wdavUser)}"></div>
       <div class="fg"><label class="fl">密码/应用专用密码</label><input class="fi" id="wPass" type="password" value="${escA(cfg.wdavPass)}"></div>
       <div class="fg"><label class="fl">同步路径</label><input class="fi" id="wPath" value="${escA(cfg.wdavPath||'/KeyVault/')}" placeholder="/KeyVault/"></div>
-      <div class="fg"><label class="fl">代理地址（可选）</label><input class="fi" id="wdavProxy" value="${escA(cfg.wdavProxy||'')}" placeholder="https://your-proxy.vercel.app/api/webdav"></div>
+      <div class="fg"><label class="fl">代理地址（可选）</label><input class="fi" id="wdavProxy" value="${escA(cfg.wdavProxy||'')}" placeholder="https://webdav.5as.cn/api/webdav"></div>
       <div style="font-size:11.5px;color:var(--tx3);line-height:1.7;padding:10px;background:var(--bg);border-radius:6px;border:1px solid var(--bd)">坚果云等 CF 站点需要部署 Vercel 代理服务</div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p btn-sm" onclick="wdavSync()">&#x2B06; 备份</button><button class="btn btn-g btn-sm" onclick="wdavPull()">&#x2B07; 读取</button><button class="btn btn-g btn-sm" onclick="testWdav()">测试</button></div>
       <div id="wStatus"></div>
