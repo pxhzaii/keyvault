@@ -419,7 +419,7 @@ async function kvPush(){
 async function kvPull(){
   if(!requireOnline())return;
   if(!cfg.apiBase||!apiToken)return toast('请配置云端同步','err');
-  toast('从 KV 读取...','info');
+  toast('从 KV 恢复...','info');
   try{
     let res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{headers:{'Authorization':'Bearer '+apiToken}})}
@@ -430,26 +430,20 @@ async function kvPull(){
     try{
       remote=await dec(data,mk);
     }catch(e){
-      toast('读取失败: 无法解密云端数据。请确认密码一致','err');
+      toast('恢复失败: 无法解密云端数据。请确认密码一致','err');
       return;
     }
     if(!remote.entries||!Array.isArray(remote.entries))throw new Error('格式无效');
-    if(version<=vaultVersion){toast('本地已是最新','info');return}
-    const remoteIds=new Set(remote.entries.map(e=>e.id));
-    for(const loc of entries){
-      if(!loc.deleted&&!remoteIds.has(loc.id)){
-        await softDel(loc.id);
-      }
-    }
-    let added=0,updated=0;
+    // 恢复 = 用云端数据完全覆盖本地，不比较版本
+    entries=[];
+    const tx=db.transaction(ST,'readwrite');const store=tx.objectStore(ST);store.clear();
+    let added=0;
     for(const e of remote.entries){
-      const loc=entries.find(x=>x.id===e.id);
-      if(!loc){await saveEntry(e);entries.push(e);added++}
-      else{await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
+      await saveEntry(e);entries.push(e);added++;
     }
     vaultVersion=version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-    toast(`读取成功: 新增${added} 更新${updated}`,'ok');render();renderSB();updateSyncStatusUI();
-  }catch(e){toast('读取失败: '+e.message,'err');updateSyncStatusUI()}
+    toast(`已从 KV 恢复 ${added} 条记录`,'ok');render();renderSB();updateSyncStatusUI();
+  }catch(e){toast('KV 恢复失败: '+e.message,'err');updateSyncStatusUI()}
 }
 
 /* ===== WebDAV ===== */
@@ -537,27 +531,23 @@ async function wdavSync(){
 async function wdavPull(){
   if(!requireOnline())return;
   if(!cfg.wdavUrl)return toast('请配置 WebDAV','err');
-  toast('从 WebDAV 读取...','info');
+  toast('从 WebDAV 恢复...','info');
   try{
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
     const {bodyText:b64}=await wdavReq('GET',p);
     const data=await dec(b64,mk);
     if(!data.entries||!Array.isArray(data.entries))throw new Error('格式无效');
-    const remoteIds=new Set(data.entries.map(e=>e.id));
-    for(const loc of entries){
-      if(!loc.deleted&&!remoteIds.has(loc.id)){
-        await softDel(loc.id);
-      }
-    }
-    let added=0,updated=0;
+    // 恢复 = 用云端数据完全覆盖本地，不比较版本
+    entries=[];
+    const tx=db.transaction(ST,'readwrite');const store=tx.objectStore(ST);store.clear();
+    let added=0;
     for(const e of data.entries){
-      const loc=entries.find(x=>x.id===e.id);
-      if(!loc){await saveEntry(e);entries.push(e);added++}
-      else{await saveEntry(e);const i=entries.findIndex(x=>x.id===e.id);entries[i]=e;updated++}
+      await saveEntry(e);entries.push(e);added++;
     }
-    if(data.version>vaultVersion){vaultVersion=data.version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion})}
-    toast(`WebDAV 读取: 新增${added} 更新${updated}`,'ok');render();renderSB();
-  }catch(e){toast('WebDAV 读取失败: '+e.message,'err')}
+    if(data.version)vaultVersion=data.version;
+    await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
+    toast(`已从 WebDAV 恢复 ${added} 条记录`,'ok');render();renderSB();
+  }catch(e){toast('WebDAV 恢复失败: '+e.message,'err')}
 }
 
 /* ===== Full Sync ===== */
