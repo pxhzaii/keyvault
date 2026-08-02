@@ -55,6 +55,7 @@ KeyVault/
 2. 左侧菜单 → **Workers & Pages** → **KV**
 3. 点击 **Create a namespace**，名称填 `keyvault-kv`
 4. 创建后记录 **Namespace ID**
+5. 修改**wrangler.toml**
 
 ### 第二步：创建 Pages 项目
 
