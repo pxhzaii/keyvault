@@ -1,13 +1,4 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: '8f8ef377-a2b5-4cf7-8fdf-91927975b742'
-  PropagateID: '8f8ef377-a2b5-4cf7-8fdf-91927975b742'
-  ReservedCode1: 'ea34cb08-2bcb-4e29-8576-920881b3256f'
-  ReservedCode2: 'ea34cb08-2bcb-4e29-8576-920881b3256f'
----
+
 
 # KeyVault — 多源同步密码管理器
 
@@ -216,4 +207,4 @@ KeyVault/
 
 MIT
 
-> AI生成
+
