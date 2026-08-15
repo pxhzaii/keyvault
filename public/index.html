@@ -29,34 +29,29 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 .lock-err{color:var(--danger);font-size:13px;margin-top:10px;min-height:20px}
 .lock-hint{font-size:12px;color:var(--tx3);margin-top:16px;line-height:1.6}
 
-#app{display:flex;height:100vh;opacity:0;transition:opacity .4s}#app.show{opacity:1}
-.sb{width:256px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;z-index:50}
-.sb-head{padding:18px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)}
-.sb-head .logo{font-size:26px}.sb-head h2{font-size:18px;font-weight:800;flex:1}
-.sb-nav{flex:1;overflow-y:auto;padding:6px 8px}
-.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rs);cursor:pointer;color:var(--tx2);font-size:13.5px;font-weight:500;transition:var(--t);margin-bottom:1px}
-.sb-item:hover{background:var(--ac-l);color:var(--ac)}.sb-item.active{background:var(--ac-l2);color:var(--ac);font-weight:600}
-.sb-item .badge{margin-left:auto;background:var(--bg3);padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;color:var(--tx3);min-width:22px;text-align:center}
-.sb-item.active .badge{background:var(--ac);color:#fff}
-.sb-sep{padding:14px 12px 6px;font-size:10px;text-transform:uppercase;color:var(--tx3);font-weight:700;letter-spacing:.8px}
-.sb-foot{padding:10px 12px;border-top:1px solid var(--bd);display:flex;gap:6px}
-.sb-foot button{flex:1;padding:8px;border-radius:var(--rs);font-size:12px;background:var(--bg3);color:var(--tx2);font-weight:500}
-.sb-foot button:hover{background:var(--ac-l2);color:var(--ac)}
+#app{display:flex;flex-direction:column;height:100vh;opacity:0;transition:opacity .4s}#app.show{opacity:1}
+.top-bar{display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0}
+.top-bar .logo{font-size:22px}.top-bar h2{font-size:17px;font-weight:800;flex:1}
+.top-bar-actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.top-bar-actions button{padding:6px 10px;border-radius:var(--rs);font-size:12px;background:var(--bg3);color:var(--tx2);font-weight:500;cursor:pointer;border:none;transition:var(--t)}
+.top-bar-actions button:hover{background:var(--ac-l2);color:var(--ac)}
+.cat-bar{display:flex;align-items:center;gap:6px;padding:8px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cat-bar::-webkit-scrollbar{display:none}
+.cat-tab{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;cursor:pointer;color:var(--tx2);font-size:13px;font-weight:500;white-space:nowrap;transition:var(--t);border:1.5px solid transparent;flex-shrink:0}
+.cat-tab:hover{background:var(--ac-l);color:var(--ac)}.cat-tab.active{background:var(--ac-l2);color:var(--ac);font-weight:600;border-color:var(--ac)}
+.cat-tab .badge{background:var(--bg3);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;color:var(--tx3);margin-left:2px}
+.cat-tab.active .badge{background:var(--ac);color:#fff}
+.cat-sep{width:1px;height:20px;background:var(--bd);margin:0 4px;flex-shrink:0}
 .ec-check{width:22px;height:22px;border:2px solid var(--bd);border-radius:6px;cursor:pointer;flex-shrink:0;display:none;align-items:center;justify-content:center;font-size:13px;transition:var(--t)}.select-mode .ec-check{display:flex}.select-mode .ec{cursor:default}.ec-check.checked{background:var(--ac);border-color:var(--ac);color:#fff}
 .batch-bar{display:none;align-items:center;gap:12px;padding:10px 24px;background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0}.batch-bar.show{display:flex}.batch-bar .batch-info{font-size:13px;color:var(--tx2);font-weight:600}.batch-bar .batch-info strong{color:var(--ac)}
 
-/* Sidebar sync panel */
-.sb-syncs{padding:10px 12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3)}
-.sync-group{margin-bottom:8px}.sync-group:last-child{margin-bottom:0}
-.sync-group-hd{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--tx2);margin-bottom:5px}
-.sync-group-hd .dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.sync-group-hd .dot.ok{background:var(--ok)}.sync-group-hd .dot.off{background:var(--tx3)}.sync-group-hd .dot.err{background:var(--danger)}
-.sync-group-btns{display:flex;gap:4px}
-.sync-group-btns button{flex:1;padding:5px 0;border-radius:5px;font-size:11px;font-weight:600;background:var(--bg3);color:var(--tx2);cursor:pointer;transition:var(--t);border:none}
-.sync-group-btns button:hover{background:var(--ac);color:#fff}
+/* Sync panel in top bar dropdown */
+.sync-dropdown{position:relative;display:inline-block}
+.sync-menu{display:none;position:absolute;right:0;top:100%;margin-top:6px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--radius);box-shadow:var(--shadow2);padding:12px;min-width:220px;z-index:100}
+.sync-menu.show{display:block}
 
 .mn{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.toolbar{padding:14px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
+.toolbar{padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
 .search{flex:1;max-width:420px;position:relative}
 .search input{width:100%;padding:9px 14px 9px 38px;border:1.5px solid var(--bd);border-radius:var(--rs);background:var(--bg);color:var(--tx);font-size:13.5px}
 .search input:focus{border-color:var(--ac)}
@@ -86,17 +81,7 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 .ec-acts button{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;background:var(--bg3)}
 .ec-acts button:hover{background:var(--ac-l2);color:var(--ac)}
 
-.c-social{background:#dcfce7;color:#16a34a}.c-finance{background:#fef3c7;color:#d97706}
-.c-work{background:#dbeafe;color:#2563eb}.c-email{background:#fee2e2;color:#dc2626}
-.c-shopping{background:#f3e8ff;color:#9333ea}.c-game{background:#ccfbf1;color:#0d9488}
-.c-server{background:#e7e5e4;color:#78716c}.c-other{background:var(--bg3);color:var(--tx2)}
-.dark .c-social{background:rgba(22,163,74,.15);color:#4ade80}
-.dark .c-finance{background:rgba(217,119,6,.15);color:#fbbf24}
-.dark .c-work{background:rgba(37,99,235,.15);color:#60a5fa}
-.dark .c-email{background:rgba(220,38,38,.15);color:#f87171}
-.dark .c-shopping{background:rgba(147,51,234,.15);color:#c084fc}
-.dark .c-game{background:rgba(13,148,136,.15);color:#2dd4bf}
-.dark .c-server{background:rgba(120,113,108,.15);color:#a8a29e}
+.cat-other{background:var(--bg3);color:var(--tx2)}
 
 .dv{max-width:640px;animation:fadeUp .3s}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dv-head{display:flex;align-items:center;gap:14px;margin-bottom:24px}
@@ -192,9 +177,11 @@ textarea.fi{resize:vertical;min-height:60px}
 .empty p{font-size:14px;margin-bottom:16px}
 
 @media(max-width:768px){
-  .sb{position:fixed;height:100%;transform:translateX(-100%);transition:transform .3s;z-index:100}
-  .sb.open{transform:translateX(0)}.sb-mask{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;display:none}.sb-mask.show{display:block}
-  .mob-btn{display:flex!important}.ct{padding:12px}.toolbar{padding:10px 14px;gap:8px;flex-wrap:wrap}
+  .top-bar{padding:10px 14px;gap:8px;flex-wrap:wrap}
+  .top-bar h2{font-size:15px}
+  .cat-bar{padding:6px 14px;gap:4px}
+  .cat-tab{padding:5px 10px;font-size:12px}
+  .ct{padding:12px}.toolbar{padding:8px 14px;gap:8px;flex-wrap:wrap}
   .search{max-width:100%;order:1;flex-basis:100%}.mo-box{width:100%;max-height:100vh;border-radius:0;max-width:100%}
   .fr{flex-direction:column}.ec-acts{opacity:1}.dv-acts{flex-direction:column}
   .acc-cards{flex-direction:column}
@@ -209,7 +196,6 @@ textarea.fi{resize:vertical;min-height:60px}
   .lock-box h1{font-size:22px}
   .batch-bar{flex-wrap:wrap;gap:8px!important}
 }
-.mob-btn{display:none!important;width:36px;height:36px;align-items:center;justify-content:center;border-radius:var(--rs);font-size:17px;background:var(--bg3);color:var(--tx2)}
 </style>
 </head>
 <body>
@@ -247,20 +233,21 @@ textarea.fi{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<div class="sb-mask" id="sbMask" onclick="closeSB()"></div>
 
 <div id="app">
-  <aside class="sb" id="sidebar">
-    <div class="sb-head"><span class="logo">&#x1F510;</span><h2>KeyVault</h2></div>
-    <nav class="sb-nav" id="sbNav"></nav>
-    <div class="sb-syncs" id="sbSyncs"></div>
-    <div class="sb-foot"><button onclick="lockVault()">&#x1F512; 锁定</button></div>
-  </aside>
+  <div class="top-bar">
+    <span class="logo">&#x1F510;</span><h2>KeyVault</h2>
+    <div class="top-bar-actions">
+      <button onclick="showSyncMenu(event)">&#x2601; 同步</button>
+      <button onclick="showSettings()">&#x2699; 设置</button>
+      <button onclick="lockVault()">&#x1F512; 锁定</button>
+    </div>
+  </div>
+  <div class="cat-bar" id="catBar"></div>
   <div class="mn">
     <div class="toolbar">
-      <button class="mob-btn" onclick="openSB()">&#x2630;</button>
       <div class="search"><input id="searchInput" placeholder="搜索名称、用户名或地址..." oninput="filterEntries()"></div>
-      <div class="tb-actions"><button class="btn btn-g btn-sm" id="manageBtn" onclick="toggleSelectMode()">多选</button><button class="btn btn-g btn-sm" onclick="showSettings()">&#x2699; 设置</button><button class="btn btn-p" onclick="showAddEntry()">+ 新增</button></div>
+      <div class="tb-actions"><button class="btn btn-g btn-sm" id="manageBtn" onclick="toggleSelectMode()">多选</button><button class="btn btn-p" onclick="showAddEntry()">+ 新增</button></div>
     </div>
     <div class="batch-bar" id="batchBar">
       <div class="batch-info">已选 <strong id="batchCount">0</strong> 项</div>
@@ -281,7 +268,30 @@ textarea.fi{resize:vertical;min-height:60px}
 <script>
 /* ===== Constants ===== */
 const DB='KeyVaultDB',VER=2,ST='entries',CF='config';
-const CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},{id:'social',name:'社交',icon:'&#x1F4AC;',cls:'c-social'},{id:'finance',name:'财务',icon:'&#x1F4B0;',cls:'c-finance'},{id:'work',name:'工作',icon:'&#x1F4BC;',cls:'c-work'},{id:'email',name:'邮箱',icon:'&#x2709;',cls:'c-email'},{id:'shopping',name:'购物',icon:'&#x1F6D2;',cls:'c-shopping'},{id:'game',name:'游戏',icon:'&#x1F3AE;',cls:'c-game'},{id:'server',name:'服务器',icon:'&#x1F5A5;',cls:'c-server'},{id:'other',name:'其他',icon:'&#x1F4CB;',cls:'c-other'}];
+const DEFAULT_CATS=[{id:'social',name:'社交',icon:'&#x1F4AC;'},{id:'finance',name:'财务',icon:'&#x1F4B0;'},{id:'work',name:'工作',icon:'&#x1F4BC;'},{id:'email',name:'邮箱',icon:'&#x2709;'},{id:'shopping',name:'购物',icon:'&#x1F6D2;'},{id:'game',name:'游戏',icon:'&#x1F3AE;'},{id:'server',name:'服务器',icon:'&#x1F5A5;'},{id:'other',name:'其他',icon:'&#x1F4CB;'}];
+let CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},...DEFAULT_CATS.map(c=>({...c,cls:'c-'+c.id}))];
+function catCls(id){return'cat-'+id}
+function rebuildCats(){
+  const custom=(CATS||[]).filter(c=>c.id!=='all');
+  CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},...custom.map(c=>({...c,cls:catCls(c.id)}))];
+}
+async function saveCustomCats(){
+  const custom=CATS.filter(c=>c.id!=='all');
+  await idbPut(CF,{k:'customCats',v:custom});
+}
+async function loadCustomCats(){
+  try{const d=await idbGet(CF,'customCats');if(d&&d.v&&Array.isArray(d.v)&&d.v.length>0){CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},...d.v.map(c=>({...c,cls:catCls(c.id)}))];injectCatStyles();return}}catch(e){}
+  injectCatStyles();
+}
+const CAT_COLORS=['#dcfce7,#16a34a','#fef3c7,#d97706','#dbeafe,#2563eb','#fee2e2,#dc2626','#f3e8ff,#9333ea','#ccfbf1,#0d9488','#e7e5e4,#78716c','#fce7f3,#db2777','#ffedd5,#ea580c','#e0f2fe,#0284c7','#f0fdf4,#15803d','#fef9c3,#a16207','#ede9fe,#7c3aed'];
+function injectCatStyles(){
+  let el=document.getElementById('catStyles');if(!el){el=document.createElement('style');el.id='catStyles';document.head.appendChild(el)}
+  let css='';const cats=CATS.filter(c=>c.id!=='all');cats.forEach((c,i)=>{
+    const pair=CAT_COLORS[i%CAT_COLORS.length].split(',');
+    css+=`.cat-${c.id}{background:${pair[0]};color:${pair[1]}}`;
+    css+=`.dark .cat-${c.id}{background:${pair[1]}22;color:${pair[1]}}`;
+  });el.textContent=css;
+}
 const CB_TIMEOUT=30000;
 
 /* ===== State ===== */
@@ -455,7 +465,7 @@ async function kvPull(){
       await saveEntry(e);entries.push(e);added++;
     }
     vaultVersion=version;await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-    toast(`已从 KV 恢复 ${added} 条记录`,'ok');render();renderSB();updateSyncStatusUI();
+    toast(`已从 KV 恢复 ${added} 条记录`,'ok');render();renderCatBar();updateSyncStatusUI();
   }catch(e){toast('KV 恢复失败: '+e.message,'err');updateSyncStatusUI()}
 }
 
@@ -569,7 +579,7 @@ async function wdavPull(){
     }
     if(data.version)vaultVersion=data.version;
     await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
-    toast(`已从 WebDAV 恢复 ${added} 条记录`,'ok');render();renderSB();
+    toast(`已从 WebDAV 恢复 ${added} 条记录`,'ok');render();renderCatBar();
   }catch(e){toast('WebDAV 恢复失败: '+e.message,'err')}
 }
 
@@ -603,7 +613,7 @@ async function doExportJSON(){
   const all=entries.filter(e=>!e.deleted);dl('keyvault-export.json',JSON.stringify({format:'keyvault',version:1,exportedAt:Date.now(),entries:all},null,2),'application/json');toast('导出成功','ok');
 }
 async function doExportEnc(){const all=entries.filter(e=>!e.deleted);const data=await enc({entries:all,exportedAt:Date.now()},mk);dl('keyvault-vault.enc',data,'application/octet-stream');toast('加密导出成功，同密码可在此设备或其他设备恢复','ok')}
-async function doImport(file){try{const text=await file.text();let imported=[];let count=0;if(file.name.endsWith('.enc')){const data=await dec(text.trim(),mk);if(data.entries&&Array.isArray(data.entries))imported=data.entries;else throw new Error('加密文件格式无效')}else if(file.name.endsWith('.csv')){const lines=text.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('CSV为空');const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());for(let i=1;i<lines.length;i++){const v=lines[i].split(',');const o={};headers.forEach((h,j)=>o[h]=v[j]?v[j].trim():'');imported.push({name:o.name||o.title||'未命名',username:o.username||o.user||'',password:o.password||o.pass||'',url:o.url||o.website||'',notes:o.notes||o.note||'',category:o.category||o.type||'other',customFields:[],tags:[],totpSecret:o.totp||''})}}else{const data=JSON.parse(text);if(data.format==='keyvault'&&data.entries)imported=data.entries;else if(data.items&&Array.isArray(data.items))imported=data.items.map(it=>({name:it.name||'',username:it.login?.username||'',password:it.login?.password||'',url:it.login?.uris?.[0]?.uri||'',notes:it.notes||'',category:'other',customFields:[],tags:[],totpSecret:it.login?.totp||''}));else if(Array.isArray(data))imported=data;else throw new Error('无法识别导入格式')}for(const d of imported){await addEntry(d);count++}toast(`已导入 ${count} 条记录`,'ok');render();renderSB()}catch(e){toast('导入失败: '+e.message,'err')}}
+async function doImport(file){try{const text=await file.text();let imported=[];let count=0;if(file.name.endsWith('.enc')){const data=await dec(text.trim(),mk);if(data.entries&&Array.isArray(data.entries))imported=data.entries;else throw new Error('加密文件格式无效')}else if(file.name.endsWith('.csv')){const lines=text.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('CSV为空');const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());for(let i=1;i<lines.length;i++){const v=lines[i].split(',');const o={};headers.forEach((h,j)=>o[h]=v[j]?v[j].trim():'');imported.push({name:o.name||o.title||'未命名',username:o.username||o.user||'',password:o.password||o.pass||'',url:o.url||o.website||'',notes:o.notes||o.note||'',category:o.category||o.type||'other',customFields:[],tags:[],totpSecret:o.totp||''})}}else{const data=JSON.parse(text);if(data.format==='keyvault'&&data.entries)imported=data.entries;else if(data.items&&Array.isArray(data.items))imported=data.items.map(it=>({name:it.name||'',username:it.login?.username||'',password:it.login?.password||'',url:it.login?.uris?.[0]?.uri||'',notes:it.notes||'',category:'other',customFields:[],tags:[],totpSecret:it.login?.totp||''}));else if(Array.isArray(data))imported=data;else throw new Error('无法识别导入格式')}for(const d of imported){await addEntry(d);count++}toast(`已导入 ${count} 条记录`,'ok');render();renderCatBar()}catch(e){toast('导入失败: '+e.message,'err')}}
 
 /* ===== Clipboard ===== */
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('已复制','ok');setTimeout(()=>{navigator.clipboard.readText().then(t=>{if(t===text)navigator.clipboard.writeText('')}).catch(()=>{})},CB_TIMEOUT)}catch(e){toast('复制失败','err')}}
@@ -656,7 +666,7 @@ async function handleSetup(){
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
-    loadCfg();resetLock();detectNetwork();renderSB();render();renderSyncPanel();
+    loadCfg();await loadCustomCats();resetLock();detectNetwork();renderCatBar();render();renderSyncPanel();
     toast('保险库创建成功','ok');keepPwd(pwd);
   }catch(e){err.textContent='创建失败';mk=null;apiToken=null}
 }
@@ -726,14 +736,14 @@ async function handleUnlock(){
     document.getElementById('lockScreen').classList.add('hiding');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none'},400);
     const app=document.getElementById('app');app.style.display='flex';setTimeout(()=>app.classList.add('show'),10);
-    loadCfg();resetLock();detectNetwork();renderSB();render();showBackupReminder();keepPwd(pwd);renderSyncPanel()
+    loadCfg();await loadCustomCats();resetLock();detectNetwork();renderCatBar();render();showBackupReminder();keepPwd(pwd);renderSyncPanel()
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
 function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];_pwMap.clear();_pwIdx=0;failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function resetLock(){clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
-setTimeout(renderSyncPanel,100);
+setTimeout(()=>{renderSyncPanel();renderCatBar()},100);
 
 /* ===== Network Detection ===== */
 let networkListenersAdded=false;
@@ -799,32 +809,39 @@ function updateSyncStatusUI(){
   renderSyncPanel();
 }
 
-/* ===== Sidebar Sync Panel ===== */
+/* ===== Sync Panel (dropdown) ===== */
 function renderSyncPanel(){
-  const el=document.getElementById('sbSyncs');if(!el)return;
+  const bar=document.querySelector('.top-bar-actions');
+  if(!bar)return;
+  let exist=bar.querySelector('.sync-menu');
+  if(!exist){exist=document.createElement('div');exist.className='sync-menu';bar.querySelector('button')?.after(exist)}
+  exist.style.display=syncMenuVisible?'block':'none';
   let h='';
   if(cfg.apiBase){
     const kvOk=!!(cfg.apiBase&&apiToken);
-    h+=`<div class="sync-group"><div class="sync-group-hd"><span class="dot ${kvOk?'ok':'off'}"></span> KV 云端</div><div class="sync-group-btns"><button onclick="kvPush()">推送</button><button onclick="kvPull()">恢复</button></div></div>`;
+    h+=`<div style="margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px"><span class="dot ${kvOk?'ok':'off'}" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle"></span>KV 云端</div><div style="display:flex;gap:4px"><button class="btn btn-p btn-sm" onclick="kvPush()" style="flex:1">推送</button><button class="btn btn-g btn-sm" onclick="kvPull()" style="flex:1">恢复</button></div></div>`;
   }
   if(cfg.wdavUrl){
-    h+=`<div class="sync-group"><div class="sync-group-hd"><span class="dot ok"></span> WebDAV</div><div class="sync-group-btns"><button onclick="wdavSync()">备份</button><button onclick="wdavPull()">恢复</button></div></div>`;
+    h+=`<div style="margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px"><span class="dot ok" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle;background:var(--ok)"></span>WebDAV</div><div style="display:flex;gap:4px"><button class="btn btn-p btn-sm" onclick="wdavSync()" style="flex:1">备份</button><button class="btn btn-g btn-sm" onclick="wdavPull()" style="flex:1">恢复</button></div></div>`;
   }
   if(cfg.apiBase||cfg.wdavUrl){
-    h+=`<div class="sync-group"><div class="sync-group-hd"><span class="dot ok"></span> 所有云存储</div><div class="sync-group-btns"><button onclick="fullPush()">一键推送</button><button onclick="fullSync()">一键恢复</button></div></div>`;
+    h+=`<div style="padding-top:6px;border-top:1px solid var(--bd)"><div style="display:flex;gap:4px"><button class="btn btn-g btn-sm" onclick="fullPush()" style="flex:1">一键推送</button><button class="btn btn-g btn-sm" onclick="fullSync()" style="flex:1">一键恢复</button></div></div>`;
   }
-  el.innerHTML=h;
+  if(!h)h='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">未配置同步源</div>';
+  exist.innerHTML=h;
 }
 
-/* ===== Sidebar ===== */
-function renderSB(){const nav=document.getElementById('sbNav');const trash=entries.filter(e=>e.deleted).length;let h='';CATS.forEach(c=>{const cnt=c.id==='all'?entries.filter(e=>!e.deleted).length:entries.filter(e=>e.category===c.id&&!e.deleted).length;h+=`<div class="sb-item ${curView===c.id?'active':''}" onclick="switchV('${c.id}')">${c.icon} ${c.name}${cnt?`<span class="badge">${cnt}</span>`:''}</div>`});h+=`<div class="sb-sep">工具</div>`;h+=`<div class="sb-item ${curView==='gen'?'active':''}" onclick="switchV('gen')">&#x1F3B2; 密码生成器</div>`;h+=`<div class="sb-item ${curView==='trash'?'active':''}" onclick="switchV('trash')">&#x1F5D1; 回收站${trash?`<span class="badge">${trash}</span>`:''}</div>`;nav.innerHTML=h;updateSyncStatusUI()}
-function switchV(v){curView=v;renderSB();render();closeSB()}
-function openSB(){document.getElementById('sidebar').classList.add('open');document.getElementById('sbMask').classList.add('show')}
-function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbMask').classList.remove('show')}
+/* ===== Cat Bar & Sync ===== */
+function renderCatBar(){const bar=document.getElementById('catBar');if(!bar)return;const trash=entries.filter(e=>e.deleted).length;let h='';CATS.forEach(c=>{const cnt=c.id==='all'?entries.filter(e=>!e.deleted).length:entries.filter(e=>e.category===c.id&&!e.deleted).length;h+=`<div class="cat-tab ${curView===c.id?'active':''}" onclick="switchV('${c.id}')">${c.icon} ${c.name}${cnt?`<span class="badge">${cnt}</span>`:''}</div>`});h+=`<div class="cat-sep"></div>`;h+=`<div class="cat-tab ${curView==='gen'?'active':''}" onclick="switchV('gen')">&#x1F3B2; 生成器</div>`;h+=`<div class="cat-tab ${curView==='trash'?'active':''}" onclick="switchV('trash')">&#x1F5D1; 回收站${trash?`<span class="badge">${trash}</span>`:''}</div>`;bar.innerHTML=h}
+function switchV(v){curView=v;renderCatBar();render()}
+let syncMenuVisible=false;
+function showSyncMenu(e){e.stopPropagation();syncMenuVisible=!syncMenuVisible;renderSyncPanel()}
+function hideSyncMenu(){syncMenuVisible=false;renderSyncPanel()}
+document.addEventListener('click',()=>{if(syncMenuVisible)hideSyncMenu()});
 
 /* ===== Render ===== */
-function render(){const ct=document.getElementById('content');const search=document.getElementById('searchInput').value.toLowerCase();if(curView==='gen')return renderGen(ct);if(curView==='trash')return renderTrash(ct);let list=entries.filter(e=>!e.deleted);if(curView!=='all')list=list.filter(e=>e.category===curView);if(search)list=list.filter(e=>(e.name||'').toLowerCase().includes(search)||(e.username||'').toLowerCase().includes(search)||(e.url||'').toLowerCase().includes(search)||(e.tags||[]).some(t=>t.toLowerCase().includes(search)));list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));const cat=CATS.find(c=>c.id===curView)||CATS[0];const isSel=selectMode;let h=`<div class="ct-head"><h2>${cat.icon} ${cat.name}</h2><span class="meta">${list.length} 项</span></div>`;if(!list.length){h+=`<div class="empty"><div class="icon">&#x1F510;</div><h3>暂无记录</h3><p>点击"新增"开始使用</p></div>`}else{h+=`<div class="el${isSel?' select-mode':''}"  >`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];const checked=selectedIds.has(e.id);h+=`<div class="ec" onclick="${isSel?`toggleCheck('${e.id}')`: `showDetail('${e.id}')`}"  ><div class="ec-check${checked?' checked':''}"  >${checked?'&#x2713;':''}</div><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">${esc(e.username||e.url||'')}</div></div>${isSel?'':`<div class="ec-acts"><button onclick="event.stopPropagation();copyField('${setPw(e.password)}')" title="复制密码">&#x1F4CB;</button><button onclick="event.stopPropagation();showEdit('${e.id}')" title="编辑">&#x270F;</button></div>`}</div>`});h+=`</div>`}ct.innerHTML=h}
-function renderTrash(ct){const list=entries.filter(e=>e.deleted).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));let h=`<div class="ct-head"><h2>&#x1F5D1; 回收站</h2>${list.length?`<button class="btn btn-d btn-sm" onclick="emptyTrash()">清空</button>`:''}</div>`;if(!list.length){h+=`<div class="empty"><div class="icon">&#x1F5D1;</div><h3>回收站为空</h3></div>`}else{h+=`<div class="el">`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];h+=`<div class="ec"><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">删除于 ${new Date(e.deletedAt).toLocaleString()}</div></div><div class="ec-acts"><button onclick="restoreEntry('${e.id}').then(()=>{render();renderSB()})" title="恢复">&#x21A9;</button><button onclick="confirmHardDel('${e.id}')" title="永久删除">&#x2715;</button></div></div>`});h+=`</div>`}ct.innerHTML=h}
+function render(){const ct=document.getElementById('content');const search=document.getElementById('searchInput').value.toLowerCase();if(curView==='gen')return renderGen(ct);if(curView==='trash')return renderTrash(ct);let list=entries.filter(e=>!e.deleted);if(curView!=='all')list=list.filter(e=>e.category===curView);if(search)list=list.filter(e=>(e.name||'').toLowerCase().includes(search)||(e.username||'').toLowerCase().includes(search)||(e.url||'').toLowerCase().includes(search)||(e.tags||[]).some(t=>t.toLowerCase().includes(search)));list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));const cat=CATS.find(c=>c.id===curView)||CATS[0];const isSel=selectMode;let h=`<div class="ct-head"><h2>${cat.icon} ${cat.name}</h2><span class="meta">${list.length} 项</span></div>`;if(!list.length){h+=`<div class="empty"><div class="icon">&#x1F510;</div><h3>暂无记录</h3><p>点击"新增"开始使用</p></div>`}else{h+=`<div class="el${isSel?' select-mode':''}"  >`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS.find(c=>c.id==='other')||CATS[CATS.length-1];const checked=selectedIds.has(e.id);h+=`<div class="ec" onclick="${isSel?`toggleCheck('${e.id}')`: `showDetail('${e.id}')`}"  ><div class="ec-check${checked?' checked':''}"  >${checked?'&#x2713;':''}</div><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">${esc(e.username||e.url||'')}</div></div>${isSel?'':`<div class="ec-acts"><button onclick="event.stopPropagation();copyField('${setPw(e.password)}')" title="复制密码">&#x1F4CB;</button><button onclick="event.stopPropagation();showEdit('${e.id}')" title="编辑">&#x270F;</button></div>`}</div>`});h+=`</div>`}ct.innerHTML=h}
+function renderTrash(ct){const list=entries.filter(e=>e.deleted).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));let h=`<div class="ct-head"><h2>&#x1F5D1; 回收站</h2>${list.length?`<button class="btn btn-d btn-sm" onclick="emptyTrash()">清空</button>`:''}</div>`;if(!list.length){h+=`<div class="empty"><div class="icon">&#x1F5D1;</div><h3>回收站为空</h3></div>`}else{h+=`<div class="el">`;list.forEach(e=>{const ci=CATS.find(c=>c.id===e.category)||CATS.find(c=>c.id==='other')||CATS[CATS.length-1];h+=`<div class="ec"><div class="ec-icon ${ci.cls}">${ci.icon}</div><div class="ec-info"><div class="ec-name">${esc(e.name||'未命名')}</div><div class="ec-sub">删除于 ${new Date(e.deletedAt).toLocaleString()}</div></div><div class="ec-acts"><button onclick="restoreEntry('${e.id}').then(()=>{render();renderCatBar()})" title="恢复">&#x21A9;</button><button onclick="confirmHardDel('${e.id}')" title="永久删除">&#x2715;</button></div></div>`});h+=`</div>`}ct.innerHTML=h}
 function renderGen(ct){ct.innerHTML=`<div class="ct-head"><h2>&#x1F3B2; 密码生成器</h2></div><div class="gen"><div class="gen-out"><input id="genOut" readonly><button class="btn btn-p btn-sm" onclick="doGen()">生成</button><button class="btn btn-g btn-sm" onclick="copy(document.getElementById('genOut').value)">&#x1F4CB;</button></div><div class="gen-opts"><label>长度: <strong id="genLenV">20</strong><input type="range" id="genLen" min="4" max="64" value="20" oninput="document.getElementById('genLenV').textContent=this.value"></label><label><input type="checkbox" id="genU" checked> 大写 A-Z</label><label><input type="checkbox" id="genL" checked> 小写 a-z</label><label><input type="checkbox" id="genD" checked> 数字 0-9</label><label><input type="checkbox" id="genS" checked> 符号 !@#$...</label></div><div style="margin-top:14px"><div class="fl">密码强度</div><div class="str"><div class="fill" id="genStr" style="width:0"></div></div><div style="font-size:12px;color:var(--tx3);margin-top:3px" id="genStrL"></div></div></div><div style="background:var(--bg2);border:1.5px solid var(--bd);border-radius:var(--radius);padding:20px;margin-top:16px;max-width:520px"><h4 style="margin-bottom:10px">&#x1F6E1; 安全建议</h4><ul style="padding-left:20px;font-size:13.5px;color:var(--tx2);line-height:2"><li>密码长度建议 16 位以上</li><li>混合大小写、数字和符号</li><li>不同网站使用不同密码</li><li>启用两步验证（TOTP）</li><li>定期通过 KV + WebDAV 同步备份</li></ul></div>`;doGen()}
 function doGen(){const pw=genPwd(+document.getElementById('genLen').value,{upper:document.getElementById('genU').checked,lower:document.getElementById('genL').checked,digits:document.getElementById('genD').checked,symbols:document.getElementById('genS').checked});document.getElementById('genOut').value=pw;const s=strength(pw);document.getElementById('genStr').style.width=(s.s/8*100)+'%';document.getElementById('genStr').style.background=s.c;document.getElementById('genStrL').textContent=s.l}
 function filterEntries(){render()}
@@ -854,11 +871,11 @@ async function batchDelete(){
   toast(`已将 ${count} 条移入回收站`,'ok');
   selectedIds.clear();updateBatchCount();
   if(selectMode)toggleSelectMode();
-  render();renderSB();
+  render();renderCatBar();
 }
 
 /* ===== Detail ===== */
-function showDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;const ci=CATS.find(c=>c.id===e.category)||CATS[CATS.length-1];let h=`<div class="dv"><div class="dv-head"><div class="dv-icon ${ci.cls}">${ci.icon}</div><div style="flex:1;min-width:0"><div class="dv-title">${esc(e.name||'未命名')}</div>${e.url?`<div class="dv-url">${esc(e.url)}</div>`:''}</div><div class="dv-acts"><button class="btn btn-g btn-sm" onclick="showEdit('${id}')">&#x270F; 编辑</button><button class="btn btn-g btn-sm" onclick="confirmDel('${id}')">&#x1F5D1; 删除</button></div></div><div class="dv-sec"><h4>登录信息</h4>${e.username?`<div class="dv-row"><span class="lb">用户名</span><span class="vl">${esc(e.username)}</span><button class="cp" onclick="copyField('${setPw(e.username)}')">&#x1F4CB;</button></div>`:''}<div class="dv-row"><span class="lb">密码</span><span class="vl mono" id="pd_${id}">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span><button class="cp" onclick="copyField('${setPw(e.password)}')">&#x1F4CB;</button><button class="cp" onclick="togglePwd('${id}','${setPw(e.password)}')">&#x1F441;</button></div>${e.totpSecret?`<div class="dv-row"><span class="lb">TOTP</span><span class="vl"><span class="totp-code" id="totp_${id}">------</span></span><button class="cp" onclick="copy(document.getElementById('totp_${id}').textContent)">&#x1F4CB;</button></div>`:''}</div>`;if(e.customFields?.length){h+=`<div class="dv-sec"><h4>自定义字段</h4>`;e.customFields.forEach(f=>{h+=`<div class="dv-row" style="align-items:flex-start"><span class="lb" style="padding-top:2px">${esc(f.name)}</span><span class="vl${f.secret?' mono':''}" style="white-space:pre-wrap;word-break:break-all;line-height:1.6">${f.secret?'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022':esc(f.value)}</span>${f.secret?`<button class="cp" onclick="copyField('${setPw(f.value)}')" style="flex-shrink:0">&#x1F4CB;</button>`:''}</div>`});h+=`</div>`}if(e.tags?.length){h+=`<div class="dv-sec"><h4>标签</h4><div class="tags">`;e.tags.forEach(t=>{h+=`<span class="tag">${esc(t)}</span>`});h+=`</div></div>`}if(e.notes){h+=`<div class="dv-sec"><h4>备注</h4><div style="padding:12px;background:var(--bg);border-radius:var(--rs);font-size:14px;white-space:pre-wrap;border:1px solid var(--bd)">${esc(e.notes)}</div></div>`}if(e.passwordHistory?.length){h+=`<div class="dv-sec"><h4>密码历史</h4>`;e.passwordHistory.slice().reverse().forEach(p=>{h+=`<div class="dv-row"><span class="vl mono">${esc(p.password)}</span><span class="lb" style="width:auto">${new Date(p.changedAt).toLocaleDateString()}</span><button class="cp" onclick="copyField('${setPw(p.password)}')">&#x1F4CB;</button></div>`});h+=`</div>`}h+=`<div style="margin-top:12px;font-size:12px;color:var(--tx3)">创建于 ${new Date(e.createdAt).toLocaleString()} | 更新于 ${new Date(e.updatedAt).toLocaleString()}</div></div>`;document.getElementById('content').innerHTML=h;if(e.totpSecret)startTOTP(e.totpSecret,e.id)}
+function showDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;const ci=CATS.find(c=>c.id===e.category)||CATS.find(c=>c.id==='other')||CATS[CATS.length-1];let h=`<div class="dv"><div class="dv-head"><div class="dv-icon ${ci.cls}">${ci.icon}</div><div style="flex:1;min-width:0"><div class="dv-title">${esc(e.name||'未命名')}</div>${e.url?`<div class="dv-url">${esc(e.url)}</div>`:''}</div><div class="dv-acts"><button class="btn btn-g btn-sm" onclick="showEdit('${id}')">&#x270F; 编辑</button><button class="btn btn-g btn-sm" onclick="confirmDel('${id}')">&#x1F5D1; 删除</button></div></div><div class="dv-sec"><h4>登录信息</h4>${e.username?`<div class="dv-row"><span class="lb">用户名</span><span class="vl">${esc(e.username)}</span><button class="cp" onclick="copyField('${setPw(e.username)}')">&#x1F4CB;</button></div>`:''}<div class="dv-row"><span class="lb">密码</span><span class="vl mono" id="pd_${id}">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span><button class="cp" onclick="copyField('${setPw(e.password)}')">&#x1F4CB;</button><button class="cp" onclick="togglePwd('${id}','${setPw(e.password)}')">&#x1F441;</button></div>${e.totpSecret?`<div class="dv-row"><span class="lb">TOTP</span><span class="vl"><span class="totp-code" id="totp_${id}">------</span></span><button class="cp" onclick="copy(document.getElementById('totp_${id}').textContent)">&#x1F4CB;</button></div>`:''}</div>`;if(e.customFields?.length){h+=`<div class="dv-sec"><h4>自定义字段</h4>`;e.customFields.forEach(f=>{h+=`<div class="dv-row" style="align-items:flex-start"><span class="lb" style="padding-top:2px">${esc(f.name)}</span><span class="vl${f.secret?' mono':''}" style="white-space:pre-wrap;word-break:break-all;line-height:1.6">${f.secret?'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022':esc(f.value)}</span>${f.secret?`<button class="cp" onclick="copyField('${setPw(f.value)}')" style="flex-shrink:0">&#x1F4CB;</button>`:''}</div>`});h+=`</div>`}if(e.tags?.length){h+=`<div class="dv-sec"><h4>标签</h4><div class="tags">`;e.tags.forEach(t=>{h+=`<span class="tag">${esc(t)}</span>`});h+=`</div></div>`}if(e.notes){h+=`<div class="dv-sec"><h4>备注</h4><div style="padding:12px;background:var(--bg);border-radius:var(--rs);font-size:14px;white-space:pre-wrap;border:1px solid var(--bd)">${esc(e.notes)}</div></div>`}if(e.passwordHistory?.length){h+=`<div class="dv-sec"><h4>密码历史</h4>`;e.passwordHistory.slice().reverse().forEach(p=>{h+=`<div class="dv-row"><span class="vl mono">${esc(p.password)}</span><span class="lb" style="width:auto">${new Date(p.changedAt).toLocaleDateString()}</span><button class="cp" onclick="copyField('${setPw(p.password)}')">&#x1F4CB;</button></div>`});h+=`</div>`}h+=`<div style="margin-top:12px;font-size:12px;color:var(--tx3)">创建于 ${new Date(e.createdAt).toLocaleString()} | 更新于 ${new Date(e.updatedAt).toLocaleString()}</div></div>`;document.getElementById('content').innerHTML=h;if(e.totpSecret)startTOTP(e.totpSecret,e.id)}
 function togglePwd(id,pwKey){const el=document.getElementById('pd_'+id);if(el.dataset.s==='1'){el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';el.dataset.s='0'}else{el.textContent=getPw(pwKey);el.dataset.s='1';setTimeout(()=>{el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';el.dataset.s='0'},5000)}}
 function startTOTP(secret,id){clearInterval(totpInterval);async function update(){const code=await genTOTP(secret);const el=document.getElementById('totp_'+id);if(el)el.textContent=code}update();totpInterval=setInterval(update,1000)}
 
@@ -868,12 +885,12 @@ function showEdit(id){if(!requireOnline())return;const e=entries.find(x=>x.id===
 function showEntryModal(entry){const edit=!!entry;document.getElementById('moTitle').textContent=edit?'编辑账号':'新增账号';let h=`<div class="fg"><label class="fl">名称 *</label><input class="fi" id="eName" value="${escA(entry?.name||'')}" placeholder="例：微信、支付宝"></div><div class="fr"><div class="fg"><label class="fl">分类</label><select class="fi" id="eCat">${CATS.filter(c=>c.id!=='all').map(c=>`<option value="${c.id}" ${entry?.category===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div><div class="fg"><label class="fl">地址</label><input class="fi" id="eUrl" value="${escA(entry?.url||'')}" placeholder="https://"></div></div><div class="fr"><div class="fg"><label class="fl">用户名</label><input class="fi" id="eUser" value="${escA(entry?.username||'')}"></div><div class="fg"><label class="fl">密码</label><div class="fi-wrap"><input class="fi" id="ePwd" type="password" value="${escA(entry?.password||'')}"><span class="dice" onclick="fillGen()">&#x1F3B2;</span><span class="eye" onclick="e=document.getElementById('ePwd');e.type=e.type==='password'?'text':'password'">&#x1F441;</span></div><div class="str"><div class="fill" id="eStr" style="width:0"></div></div></div></div><div class="fg"><label class="fl">TOTP 密钥</label><input class="fi" id="eTotp" value="${escA(entry?.totpSecret||'')}" placeholder="Base32 编码"></div><div class="fg"><label class="fl">标签</label><input class="fi" id="eTags" value="${(entry?.tags||[]).join(', ')}" placeholder="用逗号分隔"></div><div class="fg"><label class="fl">备注</label><textarea class="fi" id="eNotes" rows="3">${esc(entry?.notes||'')}</textarea></div><div class="fg"><label class="fl">自定义字段</label><div id="cFields"></div><button class="btn btn-g btn-sm" onclick="addCF()" style="margin-top:6px">+ 添加字段</button></div>`;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML=`<button class="btn btn-g" onclick="closeMo()">取消</button><button class="btn btn-p" onclick="saveFromModal('${entry?.id||''}')">保存</button>`;if(edit&&entry?.customFields?.length){entry.customFields.forEach(f=>addCF(f.name,f.value,f.secret))}openMo()}
 function addCF(n='',v='',sec=false){const c=document.getElementById('cFields'),d=document.createElement('div');d.className='fg-custom';d.innerHTML=`<div style="margin-bottom:6px"><input class="fi" placeholder="字段名" value="${escA(n)}" style="margin-bottom:4px"><textarea class="fi" placeholder="字段值" rows="2" style="resize:vertical;min-height:36px">${escA(v)}</textarea></div><label style="font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${sec?'checked':''}> 敏感字段</label><button class="rm" onclick="this.parentElement.remove()">&#x2715;</button>`;c.appendChild(d)}
 function fillGen(){const pw=genPwd(20);document.getElementById('ePwd').value=pw;document.getElementById('ePwd').type='text';const s=strength(pw);const b=document.getElementById('eStr');b.style.width=(s.s/8*100)+'%';b.style.background=s.c}
-async function saveFromModal(editId){if(!requireOnline())return;const name=document.getElementById('eName').value.trim();if(!name)return toast('请输入名称','err');const d={name,category:document.getElementById('eCat').value,url:document.getElementById('eUrl').value.trim(),username:document.getElementById('eUser').value.trim(),password:document.getElementById('ePwd').value,totpSecret:document.getElementById('eTotp').value.trim(),notes:document.getElementById('eNotes').value,tags:document.getElementById('eTags').value.split(',').map(s=>s.trim()).filter(Boolean),customFields:[]};document.querySelectorAll('#cFields .fg-custom').forEach(div=>{const fn=div.querySelector('input').value.trim();const fv=div.querySelector('textarea').value;const sec=div.querySelector('input[type="checkbox"]').checked;if(fn)d.customFields.push({name:fn,value:fv,secret:sec})});if(editId){await updateEntry(editId,d);toast('已更新','ok');showDetail(editId)}else{const e=await addEntry(d);toast('已添加','ok');showDetail(e.id)}renderSB();closeMo()}
+async function saveFromModal(editId){if(!requireOnline())return;const name=document.getElementById('eName').value.trim();if(!name)return toast('请输入名称','err');const d={name,category:document.getElementById('eCat').value,url:document.getElementById('eUrl').value.trim(),username:document.getElementById('eUser').value.trim(),password:document.getElementById('ePwd').value,totpSecret:document.getElementById('eTotp').value.trim(),notes:document.getElementById('eNotes').value,tags:document.getElementById('eTags').value.split(',').map(s=>s.trim()).filter(Boolean),customFields:[]};document.querySelectorAll('#cFields .fg-custom').forEach(div=>{const fn=div.querySelector('input').value.trim();const fv=div.querySelector('textarea').value;const sec=div.querySelector('input[type="checkbox"]').checked;if(fn)d.customFields.push({name:fn,value:fv,secret:sec})});if(editId){await updateEntry(editId,d);toast('已更新','ok');showDetail(editId)}else{const e=await addEntry(d);toast('已添加','ok');showDetail(e.id)}renderCatBar();closeMo()}
 
 /* ===== Delete ===== */
-function confirmDel(id){if(!requireOnline())return;if(confirm('确认删除？（移入回收站）'))softDel(id).then(()=>{render();renderSB();toast('已移入回收站','ok')})}
-function confirmHardDel(id){if(!requireOnline())return;if(confirm('永久删除无法恢复，确认？'))hardDel(id).then(()=>{render();renderSB();toast('已彻底删除','ok')})}
-async function emptyTrash(){if(!requireOnline())return;if(!confirm('清空回收站无法恢复？'))return;const t=entries.filter(e=>e.deleted);for(const e of t)await hardDel(e.id);render();renderSB();toast('已清空','ok')}
+function confirmDel(id){if(!requireOnline())return;if(confirm('确认删除？（移入回收站）'))softDel(id).then(()=>{render();renderCatBar();toast('已移入回收站','ok')})}
+function confirmHardDel(id){if(!requireOnline())return;if(confirm('永久删除无法恢复，确认？'))hardDel(id).then(()=>{render();renderCatBar();toast('已彻底删除','ok')})}
+async function emptyTrash(){if(!requireOnline())return;if(!confirm('清空回收站无法恢复？'))return;const t=entries.filter(e=>e.deleted);for(const e of t)await hardDel(e.id);render();renderCatBar();toast('已清空','ok')}
 
 /* ===== Settings ===== */
 function toggleAccCard(id){
@@ -881,8 +898,53 @@ function toggleAccCard(id){
   if(!card)return;
   card.classList.toggle('active');
 }
+const EMOJI_LIST=['&#x1F4AC;','&#x1F4B0;','&#x1F4BC;','&#x2709;','&#x1F6D2;','&#x1F3AE;','&#x1F5A5;','&#x1F4CB;','&#x1F4E1;','&#x1F3B2;','&#x1F5C2;','&#x1F6E1;','&#x1F4C1;','&#x1F4DD;','&#x1F4DA;','&#x1F3C0;','&#x1F3AF;','&#x1F310;','&#x1F4F1;','&#x1F4BB;'];
+function renderCatManager(){
+  const el=document.getElementById('catManager');if(!el)return;
+  const cats=CATS.filter(c=>c.id!=='all');
+  let h='<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">点击图标可更换，名称直接编辑，箭头调整顺序</div>';
+  cats.forEach((c,i)=>{
+    h+=`<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd)"><span style="cursor:pointer;font-size:18px" title="更换图标" onclick="cycleCatEmoji(${i})">${c.icon}</span><input class="fi" style="flex:1;padding:6px 10px;font-size:13px" value="${escA(c.name)}" onchange="renameCat(${i},this.value)"><button class="btn btn-g btn-sm" onclick="moveCat(${i},-1)" ${i===0?'disabled style="opacity:.3"':''}>&#x25B2;</button><button class="btn btn-g btn-sm" onclick="moveCat(${i},1)" ${i===cats.length-1?'disabled style="opacity:.3"':''}>&#x25BC;</button><button class="btn btn-g btn-sm" onclick="removeCat(${i})" style="color:var(--danger)">&#x2715;</button></div>`;
+  });
+  el.innerHTML=h;
+}
+function addCustomCat(){
+  const id='cat_'+Date.now().toString(36);
+  const newCat={id,name:'新分类',icon:'&#x1F4CB;',cls:catCls(id)};
+  CATS.push(newCat);
+  saveCustomCats();injectCatStyles();renderCatBar();renderCatManager();
+}
+async function removeCat(i){
+  const cats=CATS.filter(c=>c.id!=='all');
+  const c=cats[i];if(!c)return;
+  const used=entries.filter(e=>e.category===c.id&&!e.deleted).length;
+  if(used>0){if(!confirm(`"${c.name}" 下有 ${used} 条记录，删除后这些记录将移至"其他"分类，确认？`))return;entries.filter(e=>e.category===c.id).forEach(e=>{e.category='other'});for(const e of entries)await saveEntry(e)}
+  CATS=CATS.filter(x=>x.id!==c.id);
+  if(curView===c.id){curView='all';render()}
+  saveCustomCats();injectCatStyles();renderCatBar();renderCatManager();
+}
+function renameCat(i,val){
+  const cats=CATS.filter(c=>c.id!=='all');
+  cats[i].name=val.trim()||cats[i].name;
+  saveCustomCats();renderCatBar();
+}
+function moveCat(i,dir){
+  const cats=CATS.filter(c=>c.id!=='all');
+  const j=i+dir;if(j<0||j>=cats.length)return;
+  const ci=CATS.indexOf(cats[i]),cj=CATS.indexOf(cats[j]);
+  [CATS[ci],CATS[cj]]=[CATS[cj],CATS[ci]];
+  saveCustomCats();renderCatBar();renderCatManager();
+}
+function cycleCatEmoji(i){
+  const cats=CATS.filter(c=>c.id!=='all');
+  const curIdx=EMOJI_LIST.indexOf(cats[i].icon);
+  cats[i].icon=EMOJI_LIST[(curIdx+1)%EMOJI_LIST.length];
+  saveCustomCats();renderCatBar();renderCatManager();
+}
 function showSettings(){document.getElementById('moTitle').textContent='设置';const h=`
 <div class="stg-sec"><h3>&#x2699; 通用</h3><div class="stg-item"><div class="stg-info"><h4>暗色模式</h4><p>切换深色/浅色主题</p></div><div class="toggle ${cfg.dark?'on':''}" onclick="this.classList.toggle('on');cfg.dark=this.classList.contains('on');applyDark();saveCfg()"></div></div><div class="stg-item"><div class="stg-info"><h4>刷新保持解锁</h4><p>刷新页面后自动恢复解锁状态</p></div><div class="toggle ${cfg.keepUnlocked?'on':''}" onclick="this.classList.toggle('on');cfg.keepUnlocked=this.classList.contains('on');if(!cfg.keepUnlocked)clearKeepPwd();saveCfg()"></div></div><div class="stg-item"><div class="stg-info"><h4>自动锁定</h4><p>无操作后自动锁定</p></div><select style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font-size:13px" onchange="cfg.autoLock=+this.value;saveCfg();resetLock()"><option value="0" ${cfg.autoLock===0?'selected':''}>永不锁定</option><option value="1" ${cfg.autoLock===1?'selected':''}>1 分钟</option><option value="3" ${cfg.autoLock===3?'selected':''}>3 分钟</option><option value="5" ${cfg.autoLock===5?'selected':''}>5 分钟</option><option value="10" ${cfg.autoLock===10?'selected':''}>10 分钟</option><option value="15" ${cfg.autoLock===15?'selected':''}>15 分钟</option></select></div></div>
+
+<div class="stg-sec"><h3>&#x1F3F7; 分类管理</h3><div id="catManager"></div><button class="btn btn-g btn-sm" onclick="addCustomCat()" style="margin-top:8px">+ 添加分类</button></div>
 
 <div class="acc-cards">
   <div class="acc-card" id="accKv" onclick="toggleAccCard('accKv')">
@@ -911,8 +973,8 @@ function showSettings(){document.getElementById('moTitle').textContent='设置';
 
 <div class="stg-sec"><h3>&#x1F4E5; 导入 / &#x1F4E4; 导出</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-g btn-sm" onclick="doExportJSON()">&#x1F4E4; 明文 JSON</button><button class="btn btn-g btn-sm" onclick="doExportEnc()">&#x1F4E4; 加密导出</button></div><div class="ie-area" onclick="document.getElementById('impF').click()"><p>&#x1F4E5; 点击导入备份文件</p><p style="font-size:12px;color:var(--tx3);margin-top:4px">KeyVault JSON / Bitwarden JSON / CSV</p></div><input type="file" id="impF" style="display:none" accept=".json,.csv" onchange="doImport(this.files[0]);this.value=''"></div>
 <div class="stg-sec"><h3>关于</h3><div style="font-size:13px;color:var(--tx2);line-height:1.8"><p><strong>KeyVault</strong> - 多源同步密码管理器</p><p>AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地</p><p>主密码不存储，丢失无法恢复</p></div></div>
-`;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo()}
-function saveAllSettings(){cfg.apiBase=(document.getElementById('apiBase')?.value.trim()||cfg.apiBase).replace(/\/+$/,'');cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderSB();renderSyncPanel();initKvToken()}
+`;document.getElementById('moBody').innerHTML=h;document.getElementById('moFoot').innerHTML='<button class="btn btn-g" onclick="saveAllSettings();closeMo()">保存并关闭</button>';openMo();renderCatManager()}
+function saveAllSettings(){cfg.apiBase=(document.getElementById('apiBase')?.value.trim()||cfg.apiBase).replace(/\/+$/,'');cfg.wdavUrl=document.getElementById('wUrl')?.value.trim()||cfg.wdavUrl;cfg.wdavUser=document.getElementById('wUser')?.value.trim()||cfg.wdavUser;cfg.wdavPass=document.getElementById('wPass')?.value||cfg.wdavPass;cfg.wdavPath=document.getElementById('wPath')?.value.trim()||'/KeyVault/';cfg.wdavProxy=document.getElementById('wdavProxy')?.value.trim()||'';saveCfg();toast('设置已保存','ok');renderCatBar();renderSyncPanel();initKvToken()}
 async function testWdav(){saveAllSettings();const s=document.getElementById('wStatus');s.innerHTML='<div class="wdav-status" style="background:var(--bg3);color:var(--tx2)">测试中...</div>';try{
   await wdavTest();s.innerHTML='<div class="wdav-status ok">&#x2713; 连接成功</div>'
 }catch(e){s.innerHTML=`<div class="wdav-status err">&#x2717; ${esc(e.message)}</div>`}}
@@ -931,4 +993,5 @@ const savedPwd=cfg.keepUnlocked?getKeptPwd():null;if(savedPwd&&hash){document.ge
 </script>
 </body>
 </html>
+
 
