@@ -243,6 +243,7 @@ textarea.fi{resize:vertical;min-height:60px}
     <button class="lock-btn" onclick="handleUnlock()">解锁</button>
     <div class="lock-err" id="lockErr">&nbsp;</div>
     <div class="lock-hint">忘记密码将无法恢复数据</div>
+    <div class="lock-hint" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)"><button style="color:var(--danger);font-weight:500;background:none;border:none;cursor:pointer;font-size:11px;padding:0" onclick="clearLocalVault()">清除本地保险库</button></div>
   </div>
 </div>
 
@@ -780,6 +781,20 @@ async function handleUnlock(){
 }
 function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];clearPwMap();failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
 function switchToRestore(){document.getElementById('welcomeBox').style.display='none';document.getElementById('restoreBox').style.display='block';document.getElementById('restorePwd').focus()}
+async function clearLocalVault(){
+  if(!confirm('清除本地保险库将删除浏览器中所有数据（不影响云端），确认？'))return;
+  if(!confirm('再次确认：本地所有账号数据将被清除，需要从云端恢复才能找回，继续？'))return;
+  try{
+    if(db){const tx=db.transaction(ST,'readwrite');tx.objectStore(ST).clear();await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}
+    const keys=['vaultHash','created','tokenHash','vaultVersion','customCats'];
+    for(const k of keys){try{await idbDel(CF,k)}catch(e){}}
+    entries=[];mk=null;apiToken=null;curPwd=null;SALT=null;vaultVersion=0;clearPwMap();
+    document.getElementById('unlockBox').style.display='none';
+    document.getElementById('welcomeBox').style.display='block';
+    document.getElementById('setupErr').innerHTML='&nbsp;';
+    toast('本地保险库已清除','ok');
+  }catch(e){toast('清除失败: '+e.message,'err')}
+}
 function switchToSetup(){document.getElementById('restoreBox').style.display='none';document.getElementById('welcomeBox').style.display='block';document.getElementById('setupPwd').focus()}
 async function handleRestore(){
   const pwd=document.getElementById('restorePwd').value;
