@@ -32,7 +32,7 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 #app{display:flex;flex-direction:column;height:100vh;opacity:0;transition:opacity .4s}#app.show{opacity:1}
 .top-bar{display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0}
 .top-bar .logo{font-size:22px}.top-bar h2{font-size:17px;font-weight:800;flex:1}
-.top-bar-actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.top-bar-actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0;position:relative}
 .top-bar-actions button{padding:6px 10px;border-radius:var(--rs);font-size:12px;background:var(--bg3);color:var(--tx2);font-weight:500;cursor:pointer;border:none;transition:var(--t)}
 .top-bar-actions button:hover{background:var(--ac-l2);color:var(--ac)}
 .cat-bar{display:flex;align-items:center;gap:6px;padding:8px 24px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -47,7 +47,7 @@ input,select,textarea{font-family:var(--font);outline:none;transition:border .2s
 
 /* Sync panel in top bar dropdown */
 .sync-dropdown{position:relative;display:inline-block}
-.sync-menu{display:none;position:absolute;right:0;top:100%;margin-top:6px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--radius);box-shadow:var(--shadow2);padding:12px;min-width:220px;z-index:100}
+.sync-menu{display:none;position:fixed;right:0;top:100%;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--radius);box-shadow:var(--shadow2);padding:12px;min-width:220px;z-index:100}
 .sync-menu.show{display:block}
 
 .mn{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -240,7 +240,9 @@ textarea.fi{resize:vertical;min-height:60px}
   <div class="top-bar">
     <span class="logo">&#x1F510;</span><h2>KeyVault</h2>
     <div class="top-bar-actions">
-      <button onclick="showSyncMenu(event)">&#x2601; 同步</button>
+      <div class="sync-dropdown" id="syncDropdown">
+        <button onclick="showSyncMenu(event)">&#x2601; 同步</button>
+      </div>
       <button onclick="showSettings()">&#x2699; 设置</button>
       <button onclick="lockVault()">&#x1F512; 锁定</button>
     </div>
@@ -822,10 +824,14 @@ function updateSyncStatusUI(){
 
 /* ===== Sync Panel (dropdown) ===== */
 function renderSyncPanel(){
-  const bar=document.querySelector('.top-bar-actions');
-  if(!bar)return;
-  let exist=bar.querySelector('.sync-menu');
-  if(!exist){exist=document.createElement('div');exist.className='sync-menu';exist.onclick=e=>e.stopPropagation();bar.querySelector('button')?.after(exist)}
+  const dd=document.getElementById('syncDropdown');
+  if(!dd)return;
+  let exist=dd.querySelector('.sync-menu');
+  if(!exist){exist=document.createElement('div');exist.className='sync-menu';exist.onclick=e=>e.stopPropagation();dd.appendChild(exist)}
+  if(syncMenuVisible){
+    const btn=dd.querySelector('button');
+    if(btn){const r=btn.getBoundingClientRect();exist.style.top=(r.bottom+6)+'px';exist.style.right=(window.innerWidth-r.right)+'px'}
+  }
   exist.style.display=syncMenuVisible?'block':'none';
   let h='';
   if(cfg.apiBase){
