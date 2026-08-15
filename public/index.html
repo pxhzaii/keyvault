@@ -437,7 +437,8 @@ async function kvPush(){
     }catch(e){}
     vaultVersion=Math.max(vaultVersion,remoteVersion)+1;
     const all=entries.filter(e=>!e.deleted);
-    const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50)},mk);
+    const customCats=CATS.filter(c=>c.id!=='all');
+    const vaultData=await enc({entries:all,version:vaultVersion,updatedAt:Date.now(),device:navigator.userAgent.slice(0,50),customCats},mk);
     let res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})});
     if(res.status===401){await initKvToken();res=await fetch(cfg.apiBase+'/api/vault',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiToken},body:JSON.stringify({data:vaultData,version:vaultVersion})})}
     if(!res.ok)throw new Error(await res.text());
@@ -463,6 +464,11 @@ async function kvPull(){
       return;
     }
     if(!remote.entries||!Array.isArray(remote.entries))throw new Error('格式无效');
+    // 恢复自定义分类
+    if(remote.customCats&&Array.isArray(remote.customCats)){
+      CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},...remote.customCats.map(c=>({...c,cls:catCls(c.id)}))];
+      await saveCustomCats();injectCatStyles();
+    }
     // 恢复 = 用云端数据完全覆盖本地，不比较版本
     entries=[];
     // 先清空 IndexedDB，等 clear 完成后再逐个写入，避免事务竞态
@@ -563,7 +569,8 @@ async function wdavSync(){
     }catch(e){}
     vaultVersion=Math.max(vaultVersion,remoteVersion)+1;
     const all=entries.filter(e=>!e.deleted);
-    const data=await enc({entries:all,version:vaultVersion,exportedAt:Date.now()},mk);
+    const customCats=CATS.filter(c=>c.id!=='all');
+    const data=await enc({entries:all,version:vaultVersion,exportedAt:Date.now(),customCats},mk);
     const p=(cfg.wdavPath||'/KeyVault/').replace(/\/$/,'')+'/vault.enc';
     await wdavReq('PUT',p,data,true);toast('WebDAV 备份成功','ok');
     await idbPut(CF,{k:'vaultVersion',v:vaultVersion});
@@ -579,6 +586,11 @@ async function wdavPull(){
     const {bodyText:b64}=await wdavReq('GET',p);
     const data=await dec(b64,mk);
     if(!data.entries||!Array.isArray(data.entries))throw new Error('格式无效');
+    // 恢复自定义分类
+    if(data.customCats&&Array.isArray(data.customCats)){
+      CATS=[{id:'all',name:'全部',icon:'&#x1F4E1;',cls:''},...data.customCats.map(c=>({...c,cls:catCls(c.id)}))];
+      await saveCustomCats();injectCatStyles();
+    }
     // 恢复 = 用云端数据完全覆盖本地，不比较版本
     entries=[];
     // 先清空 IndexedDB，等 clear 完成后再逐个写入，避免事务竞态
