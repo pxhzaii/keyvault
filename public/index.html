@@ -223,6 +223,7 @@ textarea.fi{resize:vertical;min-height:60px}
     <input class="lock-input" type="password" id="setupPwd2" placeholder="确认主密码" autocomplete="off">
     <button class="lock-btn" onclick="handleSetup()">创建保险库</button>
     <div class="lock-err" id="setupErr">&nbsp;</div>
+    <div class="lock-hint" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">已有主密码？<button style="color:var(--ac);font-weight:600;background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px" onclick="switchToUnlock()">点击解锁</button></div>
   </div>
   <div class="lock-box" id="unlockBox" style="display:none">
     <div class="lock-icon">&#x1F513;</div>
@@ -767,6 +768,7 @@ async function handleUnlock(){
   }catch(e){err.textContent='解锁失败';mk=null;apiToken=null}
 }
 function lockVault(){mk=null;apiToken=null;curPwd=null;SALT=null;entries=[];clearPwMap();failCount=0;lockUntil=0;networkListenersAdded=false;clearTimeout(lockdownTimer);clearInterval(totpInterval);clearKeepPwd();const ls=document.getElementById('lockScreen');ls.style.display='flex';ls.classList.remove('hiding');document.getElementById('unlockBox').style.display='block';document.getElementById('welcomeBox').style.display='none';document.getElementById('app').style.display='none';document.getElementById('app').classList.remove('show');document.getElementById('masterPwd').value='';document.getElementById('masterPwd').disabled=false;document.getElementById('lockErr').innerHTML='&nbsp;'}
+function switchToUnlock(){document.getElementById('welcomeBox').style.display='none';document.getElementById('unlockBox').style.display='block';document.getElementById('masterPwd').focus()}
 function resetLock(){if(!mk)return;const now=Date.now();if(resetLock._last&&now-resetLock._last<5000)return;resetLock._last=now;clearTimeout(lockTimer);if(cfg.autoLock>0)lockTimer=setTimeout(lockVault,cfg.autoLock*60000)}
 document.addEventListener('mousemove',resetLock);document.addEventListener('keydown',resetLock);document.addEventListener('click',resetLock);
 
