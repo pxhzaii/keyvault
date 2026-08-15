@@ -620,8 +620,9 @@ async function wdavPull(skipConfirm=false){
 async function fullSync(){
   if(!requireOnline())return;
   if(!cfg.apiBase&&!cfg.wdavUrl)return toast('请配置同步源','err');
-  if(cfg.apiBase)await kvPull();
-  if(cfg.wdavUrl)await wdavPull();
+  if(!confirm('恢复将用云端数据完全覆盖本地数据，本地新增且未同步的记录将丢失，确认？'))return;
+  if(cfg.apiBase)await kvPull(true);
+  if(cfg.wdavUrl)await wdavPull(true);
 }
 async function fullPush(){
   if(!requireOnline())return;
