@@ -88,13 +88,7 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 4. 填写坚果云用户名和**应用专用密码**（不是登录密码）
 5. 点击 **测试** 验证连接，会自动创建坚果云目录。
 
-### 自建 WebDAV 白名单
 
-| 修改位置 | 方法 |
-|----------|------|
-| CF Pages 环境变量 | 设置 `WEBDAV_ALLOWED_DOMAINS` |
-| Vercel 代理 | 修改 `api/webdav.js` 中的 `ALLOWED_DOMAINS` |
-| 后端源码 | 修改 `[[route]].js` 中的 `DEFAULT_ALLOWED_DOMAINS` |
 
 ---
 
@@ -108,15 +102,9 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 - 密码字段通过 `_pwMap` 机制避免明文写入 DOM
 - 暴力破解防护：指数退避锁定
 
-## 技术栈
-
-- 前端：原生 HTML/CSS/JS，无框架依赖
-- 后端：Cloudflare Pages Functions
-- 存储：Cloudflare KV + IndexedDB
-- 加密：Web Crypto API (PBKDF2 + AES-256-GCM)
  
 ## License
 
 MIT
 
-> AI生成
+
