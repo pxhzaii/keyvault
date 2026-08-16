@@ -52,7 +52,7 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
 | `GATE_PASSWORD` | 访问密码（不设置则关闭门禁） | `mySecret123` |
-| `WEBDAV_ALLOWED_DOMAINS` | WebDAV 域名白名单，逗号分隔 | `dav.jianguoyun.com,nextcloud.example.com` |
+| `WEBDAV_ALLOWED_DOMAINS` | WebDAV 域名白名单，已弃用 | `dav.jianguoyun.com,nextcloud.example.com` |
 
 ### 第五步：验证
 
