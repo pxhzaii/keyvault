@@ -73,21 +73,9 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 
 ### Vercel 部署步骤
 
-1. Fork [代理仓库](https://github.com/pxhzaii/keyvault-webdav-proxy)
+ [代理仓库](https://github.com/pxhzaii/keyvault-webdav-proxy) 有说明
 
-2. 登录 [Vercel](https://vercel.com/) → **Add New** → **Project** → 导入该仓库
-3. 直接点击 **Deploy**
-4. 记录域名，如 `https://keyvault-webdav-proxy.vercel.app`
-5. 代理地址就是`https://keyvault-webdav-proxy.vercel.app/api/webdav`
 
-### 在 KeyVault 中配置
-
-1. 打开 KeyVault → 设置 → WebDAV 备份
-2. 服务器类型选 **坚果云**（自动填充地址和代理）
-3. 代理地址填 Vercel 域名：`https://你的项目.vercel.app/api/webdav`
-4. 填写坚果云用户名和**应用专用密码**（不是登录密码）
-5. 点击 **测试** 验证连接，会自动创建坚果云目录。
-6. 自用的话，直接将上面的值写入源码，用户名留空即可，使用的时候手动填。
 
 
 ---
