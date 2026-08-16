@@ -73,18 +73,12 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 
 ### Vercel 部署步骤
 
-1. 将 `keyvault-webdav-proxy/` 目录推到独立的 GitHub 仓库
-   ```
-   keyvault-webdav-proxy/
-   ├── api/
-   │   └── webdav.js      # 从 webdav.js 移动到 api/ 目录下
-   └── package.json
-   ```
-   > Vercel 要求 Serverless Function 放在 `api/` 目录下，访问路径自动变为 `/api/webdav`
+1. Fork [Vercel](https://github.com/pxhzaii/keyvault-webdav-proxy)
 
 2. 登录 [Vercel](https://vercel.com/) → **Add New** → **Project** → 导入该仓库
 3. 直接点击 **Deploy**
 4. 记录域名，如 `https://keyvault-webdav-proxy.vercel.app`
+5. 代理地址就是`https://keyvault-webdav-proxy.vercel.app/api/webdav`
 
 ### 在 KeyVault 中配置
 
