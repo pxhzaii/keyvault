@@ -1,13 +1,3 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: '39378010-ea18-4ebc-bf92-515e4e3930df'
-  PropagateID: '39378010-ea18-4ebc-bf92-515e4e3930df'
-  ReservedCode1: '94b17c14-0a65-4ed0-a66e-a06274575edc'
-  ReservedCode2: '94b17c14-0a65-4ed0-a66e-a06274575edc'
----
 
 # KeyVault — 多源同步密码管理器
 
@@ -17,35 +7,16 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 
 - **AES-256-GCM 加密**：PBKDF2 60万次迭代，确定性派生盐
 - **三端同步**：KV 云端（主存储）+ WebDAV（坚果云等异地备份）+ IndexedDB（本地缓存）
-- **TOTP 动态码**：存储并生成其他服务的 TOTP 验证码
 - **密码生成器**：可配置长度和字符集
 - **访问密码**：通过环境变量 `GATE_PASSWORD` 控制，前端零接触密码
 - **暴力破解防护**：指数退避锁定
 - **离线模式**：断网时自动切换，禁止写操作
 
-## 项目结构
 
-```
-KeyVault/
-├── public/
-│   └── index.html                    # 前端主应用
-├── functions/
-│   └── api/
-│       └── [[route]].js              # Cloudflare Pages Function 后端
-├── keyvault-webdav-proxy/
-│   ├── api/
-│   │   └── webdav.js                 # Vercel WebDAV 代理
-│   └── package.json
-├── wrangler.toml                     # Cloudflare 配置
-├── _routes.json                      # CF 路由配置
-└── package.json
-```
 
 ---
 
-## 部署方案一：Cloudflare Pages（推荐）
-
-前端和后端 API 同域部署，天然无 CORS 问题。
+## 部署
 
 ### 第一步：创建 KV Namespace
 
