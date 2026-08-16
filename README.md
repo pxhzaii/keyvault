@@ -73,7 +73,7 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 
 ### Vercel 部署步骤
 
-1. Fork [Vercel](https://github.com/pxhzaii/keyvault-webdav-proxy)
+1. Fork [仓库](https://github.com/pxhzaii/keyvault-webdav-proxy)
 
 2. 登录 [Vercel](https://vercel.com/) → **Add New** → **Project** → 导入该仓库
 3. 直接点击 **Deploy**
