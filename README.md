@@ -3,10 +3,10 @@ AIGC:
   ContentProducer: '001191110102MAD55U9H0F10002'
   ContentPropagator: '001191110102MAD55U9H0F10002'
   Label: '1'
-  ProduceID: '98c08e41-d158-42db-854d-e77ed083c6b9'
-  PropagateID: '98c08e41-d158-42db-854d-e77ed083c6b9'
-  ReservedCode1: '4a39e054-37a2-4225-89eb-f83294bfebf0'
-  ReservedCode2: '4a39e054-37a2-4225-89eb-f83294bfebf0'
+  ProduceID: '39378010-ea18-4ebc-bf92-515e4e3930df'
+  PropagateID: '39378010-ea18-4ebc-bf92-515e4e3930df'
+  ReservedCode1: '94b17c14-0a65-4ed0-a66e-a06274575edc'
+  ReservedCode2: '94b17c14-0a65-4ed0-a66e-a06274575edc'
 ---
 
 # KeyVault — 多源同步密码管理器
@@ -98,7 +98,7 @@ KeyVault/
 
 ### 为什么需要代理？
 
-坚果云（`dav.jianguoyun.com`）使用 Cloudflare CDN，从 CF Pages 或 EdgeOne 直接请求会遇到 520 错误。需要通过非 CF 网络的代理转发请求。
+坚果云（`dav.jianguoyun.com`）使用 Cloudflare CDN，从 CF Pages 直接请求会遇到 520 错误。需要通过非 CF 网络的代理转发请求。
 
 ### Vercel 部署步骤
 
