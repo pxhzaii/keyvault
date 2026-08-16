@@ -1,4 +1,13 @@
- 
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: 'd777f2f8-98b6-4087-922d-56ee5e2a6f7b'
+  PropagateID: 'd777f2f8-98b6-4087-922d-56ee5e2a6f7b'
+  ReservedCode1: '669359a1-2c71-4a27-ad6e-323f8bf6594f'
+  ReservedCode2: '669359a1-2c71-4a27-ad6e-323f8bf6594f'
+---
 
 # KeyVault — 多源同步密码管理器
 
@@ -23,11 +32,9 @@ KeyVault/
 ├── functions/
 │   └── api/
 │       └── [[route]].js              # Cloudflare Pages Function 后端
-├── edge-functions/
-│   └── api/
-│       └── [[route]].js              # 腾讯云 EdgeOne Makers Edge Function 后端
 ├── keyvault-webdav-proxy/
-│   ├── webdav.js                     # Vercel WebDAV 代理
+│   ├── api/
+│   │   └── webdav.js                 # Vercel WebDAV 代理
 │   └── package.json
 ├── wrangler.toml                     # Cloudflare 配置
 ├── _routes.json                      # CF 路由配置
@@ -87,51 +94,6 @@ KeyVault/
 
 ---
 
-## 部署方案二：腾讯云 EdgeOne Makers
-
-腾讯云 EdgeOne Makers 提供 Edge Function + KV 存储，与 Cloudflare Workers API 高度兼容，可实现同域部署。
-
-### 第一步：开通 KV 存储
-
-1. 登录 [EdgeOne 控制台](https://console.cloud.tencent.com/edgeone)
-2. 顶部导航栏点击 **KV 存储** → **立即申请**
-3. 填写申请信息，开通 KV 存储服务
-
-### 第二步：创建 Makers 项目
-
-1. 左侧菜单 → **Makers** → **创建项目**
-2. 选择 **Git 仓库** → 授权并选择你的 GitHub 仓库
-3. 构建设置：
-   - **构建命令**：留空
-   - **输出目录**：`public`
-4. 点击 **部署**
-
-### 第三步：关联 KV 存储
-
-1. 进入项目 → **设置** → **KV 存储**
-2. 点击 **关联 KV 空间**，选择第一步开通的 KV 存储
-3. **绑定变量名**：`KEYVAULT_KV`（必须与代码一致）
-
-### 第四步：配置环境变量（可选）
-
-项目 **设置** → **环境变量**：
-
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `GATE_PASSWORD` | 访问密码（不设置则关闭门禁） | `mySecret123` |
-| `WEBDAV_ALLOWED_DOMAINS` | WebDAV 域名白名单，逗号分隔 | `dav.jianguoyun.com,nextcloud.example.com` |
-
-### 第五步：验证
-
-1. 打开 Makers 分配的域名
-2. 创建主密码 → 添加条目 → 测试推送/恢复
-
-### 自定义域名（可选）
-
-项目 **设置** → **域名管理** → **添加域名**，按提示添加 CNAME 记录。
-
----
-
 ## WebDAV 代理部署（坚果云等场景）
 
 ### 为什么需要代理？
@@ -166,23 +128,8 @@ KeyVault/
 | 修改位置 | 方法 |
 |----------|------|
 | CF Pages 环境变量 | 设置 `WEBDAV_ALLOWED_DOMAINS` |
-| EdgeOne Makers 环境变量 | 设置 `WEBDAV_ALLOWED_DOMAINS` |
 | Vercel 代理 | 修改 `api/webdav.js` 中的 `ALLOWED_DOMAINS` |
 | 后端源码 | 修改 `[[route]].js` 中的 `DEFAULT_ALLOWED_DOMAINS` |
-
----
-
-## 两种部署方案对比
-
-|  | Cloudflare Pages | 腾讯云 EdgeOne Makers |
-|---|---|---|
-| 前后端同域 | 是（无 CORS） | 是（无 CORS） |
-| 后端存储 | Workers KV | Makers KV |
-| Edge Function | Pages Function | Edge Function（API 兼容） |
-| 国内访问 | 需自定义域名+CDN | 原生国内节点，延迟更低 |
-| 免费额度 | KV 10万次读/天，1000次写/天 | KV 1GB 存储，免费版有请求限制 |
-| 自定义域名 | Cloudflare 管理 | 腾讯云管理 |
-| 推荐场景 | 全球用户 | 国内用户优先 |
 
 ---
 
@@ -199,12 +146,12 @@ KeyVault/
 ## 技术栈
 
 - 前端：原生 HTML/CSS/JS，无框架依赖
-- 后端：Cloudflare Pages Functions / 腾讯云 EdgeOne Edge Functions
-- 存储：Cloudflare KV / Makers KV + IndexedDB
+- 后端：Cloudflare Pages Functions
+- 存储：Cloudflare KV + IndexedDB
 - 加密：Web Crypto API (PBKDF2 + AES-256-GCM)
  
 ## License
 
 MIT
 
-
+> AI生成
