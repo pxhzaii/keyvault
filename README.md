@@ -3,10 +3,10 @@ AIGC:
   ContentProducer: '001191110102MAD55U9H0F10002'
   ContentPropagator: '001191110102MAD55U9H0F10002'
   Label: '1'
-  ProduceID: 'd777f2f8-98b6-4087-922d-56ee5e2a6f7b'
-  PropagateID: 'd777f2f8-98b6-4087-922d-56ee5e2a6f7b'
-  ReservedCode1: '669359a1-2c71-4a27-ad6e-323f8bf6594f'
-  ReservedCode2: '669359a1-2c71-4a27-ad6e-323f8bf6594f'
+  ProduceID: '98c08e41-d158-42db-854d-e77ed083c6b9'
+  PropagateID: '98c08e41-d158-42db-854d-e77ed083c6b9'
+  ReservedCode1: '4a39e054-37a2-4225-89eb-f83294bfebf0'
+  ReservedCode2: '4a39e054-37a2-4225-89eb-f83294bfebf0'
 ---
 
 # KeyVault — 多源同步密码管理器
@@ -17,7 +17,7 @@ AES-256-GCM 加密 | KV 云端 + WebDAV 备份 + IndexedDB 本地存储
 
 - **AES-256-GCM 加密**：PBKDF2 60万次迭代，确定性派生盐
 - **三端同步**：KV 云端（主存储）+ WebDAV（坚果云等异地备份）+ IndexedDB（本地缓存）
-- **TOTP 两步验证**：支持 TOTP 动态验证码
+- **TOTP 动态码**：存储并生成其他服务的 TOTP 验证码
 - **密码生成器**：可配置长度和字符集
 - **访问密码**：通过环境变量 `GATE_PASSWORD` 控制，前端零接触密码
 - **暴力破解防护**：指数退避锁定
